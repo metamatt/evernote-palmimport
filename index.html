@@ -1,0 +1,69 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>Palm Desktop memo importer for Evernote</title>
+</head>
+
+<body>
+<h1>Palm Desktop memo importer for Evernote</h1>
+<hr />
+<p><a href="#whatis">what this is</a> | <a href="#download">download</a> | <a href="#instructions">instructions</a> | <a href="#acknowledgements">acknowledgements</a> | <a href="#donations">donations</a></p>
+<hr />
+<h2><a name="whatis" id="whatis"></a>What this is</h2>
+<p>Palm Desktop memo importer for Evernote is a utility program to bring your existing memos or notes from Palm Desktop (synced copies of notes created on a Palm device or in Palm Desktop itself) into Evernote (a web service and programs for storing and syncing notes between the web and a variety of devices). You'll find this useful if you've been using a PalmOS device such as a Treo smartphone and are moving to a different device (Palm Pre, iPhone, BlackBerry, etc.) which has Evernote support, and you want to bring your old notes with you.</p>
+<p>The import process will create a new Evernote notebook called &quot;Palm import&quot;. In that notebook, it will create a new Evernote note for each Palm Desktop memo. It will create and apply Evernote tags corresponding to the Palm Desktop categories on each note. If the data exported from Palm Desktop includes modification dates for each note (which is true when exporting with Palm Desktop for Mac, but not Palm Desktop for Windows), then this date will be used as the creation date for the note in Evernote.</p>
+<p>This is a one-time import from Palm Desktop to Evernote, not a sync utility.</p>
+<p>See <a href="#instructions">below for instructions</a> on how to export your notes from Palm Desktop in a format this utility can read.</p>
+<hr />
+<h2><a name="download" id="download"></a>Download:</h2>
+<ul>
+  <li>for Mac OS X: <a href="EvernotePalmMemoImporter-MacOSX.zip">(8.8MB .app, zipped)</a></li>
+  <li>for Windows: (<a href="EvernotePalmMemoImporter-Win32.zip">5.6MB zip archive</a>). If you get an error about &quot;Application failed to initialize&quot; when running it, you may first need to download and install these <a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=9b2da534-3e03-4391-8a4d-074b9f2bc1bf&displaylang=en">Microsoft application support libraries</a>.</li>
+  <li>source, cross-platform for Python: (<a href="EvernotePalmMemoImporter-source.tgz">132KB gzipped tarball</a>). You can use this on Linux, or on OS X or Windows if you want to avoid the large standalone packages above; there's a command-line script that requires only Python, as well as a GUI that additionally requires wxPython.</li>
+</ul>
+<hr />
+<h2><a name="instructions" id="instructions"></a>Instructions</h2>
+<p>First, you'll need an Evernote account. <a href="https://www.evernote.com/Registration.action">Sign up</a> if you don't already have one.</p>
+<p>Second, you'll need to have Palm Desktop installed, under either Mac OS X or Windows. This utility has been tested with Palm Desktop for Mac version 4.2.2 and with Palm Desktop for Windows version 6.2.2. If you have a choice of computers to export from, Palm Desktop for Mac preserves note modification dates, whereas the Windows version does not; if this is important to you, use Palm Desktop for Mac.</p>
+<p>Third, you'll need the memo importer utility itself. Download it using the links above, unzip the file you've downloaded, and run the standalone program directly -- it does not require installation.</p>
+<p>The process of copying your notes from your PalmOS device into Evernote goes like this:</p>
+<ol>
+  <li>Sync your PalmOS device with your computer. Now Palm Desktop will have an up-to-date copy of your notes.</li>
+  <li>Use the Export command in Palm Desktop to save these notes <a href="#exportformat">in a text format that this utility can read</a> (more info on this below). Note that both the Mac and Windows versions of the import utilty can read the files exported from both the Mac and Windows versions of Palm Desktop, as long as you do the export following the instructions below.</li>
+  <li>Run the Palm Desktop memo importer for Evernote.</li>
+  <li>Provide your Evernote credentials, and the name of the file you exported in step 2.</li>
+  <li>Press the &quot;Import notes&quot; button, and wait as your notes are copied to Evernote's servers.</li>
+</ol>
+<p>Now your notes will be available anywhere you can access Evernote.</p>
+<p><a name="exportformat" id="exportformat"></a>To export your notes from Palm Desktop in a format this utility can read:</p>
+<h4>If using Palm Desktop for Mac</h4>
+<p>Use version 4.2.2 of Palm Desktop for Mac. Launch Palm Desktop, and choose the File -&gt; Export command. In the top half of the &quot;Export: Palm Desktop&quot; window, specify a name and location for the export file; remember this because you'll have to provide this to the import utility aftwards. In the bottom half of the window, use the following settings:</p>
+<ul>
+  <li>Module: Memos</li>
+  <li>Items: All Memos (unless you only want certain memos, in which case, select the right ones before invoking the Export command)</li>
+  <li>Format: Tab &amp; Return</li>
+  <li>Columns: Export all columns (this is the default)</li>
+</ul>
+<p>(If you enter the Export command while on the Memos screen, the only option you should have to change in this dialog is the Format option.)</p>
+<p>Press Save, and wait as your memos are exported. Now you can return to step 3 in the instructions above.</p>
+<h4>If using Palm Desktop for Windows</h4>
+<p>Use version 6.2.2 of Palm Desktop for Windows. Launch Palm Desktop,  enter the Memos view, then choose the File -&gt; Export command. In the &quot;Export as&quot; dialog,  specify a name and location for the export file; remember this because you'll have to provide this to the import utility aftwards. In the bottom half of the window, use the following settings:</p>
+<ul>
+  <li>Range: All (unless you only want certain memos, in which case, select the right ones before invoking the Export command)</li>
+  <li>Export Type: &quot;Comma Separated (*.csv, *.txt)&quot;. (Note that  &quot;Tab Separated Values (*.tab, *.txt)&quot; will also work; you can try that if you have problems with the comma-separated format.)</li>
+</ul>
+<p>Press Export. This will take you to the &quot;Specify Export Fields&quot; dialog. Leave all settings at their defaults (Memo, Private, and Category should all be checked and should remain in that order) and press OK.</p>
+<p>Wait as your memos are exported. Now you can return to step 3 in the instructions above.</p>
+<hr />
+<h2><a name="acknowledgements" id="acknowledgements"></a>Acknowledgements</h2>
+<p>This program was created by Matt Ginzton, matt@maddogsw.com.</p>
+<p>Thanks to the Python, wx, and wxPython projects for providing the technology that powers this program, and thanks to Evernote for providing APIs to bring data in and out of their service.</p>
+<p>Evernote and Palm may be trademarks of their respective companies.</p>
+<hr />
+<h2><a name="donations" id="donations"></a>Donations</h2>
+<p>Palm Desktop memo importer for Evernote is available for free, but if you want to <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=6435444">say thanks with a small donation</a>, thanks in return!</p>
+<hr />
+<p>Send questions/comments to <a href="mailto:matt@maddogsw.com">matt@maddogsw.com</a></p>
+</body>
+</html>
