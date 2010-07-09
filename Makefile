@@ -1,15 +1,17 @@
 #!/usr/bin/make
 
+PYTHON = python2.5 # force use of 32-bit version on Snow Leopard
+
 default: macos-app-selfcontained
 
 clean:
 	rm -rf build dist
 
 macos-app-selfcontained:
-	python setup.py py2app
-	
+	$(PYTHON) setup.py py2app
+
 macos-app-alias:
-	python setup.py py2app -A
+	$(PYTHON) setup.py py2app -A
 
 source-package:
 	mkdir -p dist/EvernotePalmMemoImporter-source
@@ -21,10 +23,9 @@ win-package: # depends on py2exe already having run from Windows
 	cd dist && zip -9 EvernotePalmMemoImporter-Win32.zip EvernotePalmMemoImporter-Win32/EvernotePalmMemoImporter*
 
 mac-package: macos-app-selfcontained
-	strip dist/EvernotePalmMemoImporter.app/Contents/Frameworks/*
+	#strip dist/EvernotePalmMemoImporter.app/Contents/Frameworks/* # This worked on 10.5, but on 10.6 it breaks things
 	ditto -ck --sequesterRsrc --keepParent dist/EvernotePalmMemoImporter.app dist/EvernotePalmMemoImporter-MacOSX.zip
-	#mv dist/EvernotePalmMemoImporter.zip dist/EvernotePalmMemoImporter-MacOSX.zip
-	
+
 all-packages: source-package mac-package win-package
 
 upload:

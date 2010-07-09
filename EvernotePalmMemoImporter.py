@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/python2.5
 #
 # EvernotePalmMemoImporter.py
 # (c) 2009 Matt Ginzton, matt@maddogsw.com
@@ -12,9 +12,21 @@
 # - basic functionality: 2009/06/27
 # - clean up layout: 2009/06/27
 # - add instructions, about panel: 2009/06/27
+# - tricked into running on Snow Leopard: 2010/07/08
 # ------------------- to do! ----------------------
 # - make prettier UI?
 
+
+#
+# Hack around py2app bug/problem (?) on Snow Leopard, where it doesn't find
+# wx in the py2app-provided app-local library directory
+#
+# thanks to http://wiki.python-ogre.org/index.php/End-User_Distribution
+#
+import sys, platform
+if platform.system() == 'Darwin':
+	sys.path.insert(0, '../Resources/lib/python2.5/lib-dynload')
+	sys.path.insert(0, '../Resources/lib/python2.5/site-packages.zip')
 
 #
 # Python modules we use
