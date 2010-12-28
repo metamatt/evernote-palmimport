@@ -11,6 +11,7 @@
 # - use date stamp from Palm as date stamp on Evernote: 2009/06/27
 # - use categories from Palm as tags in Evernote: 2009/06/27
 # - add GUI (see wrapper EvernotePalmImporter.py): 2009/06/27
+# - continue when individual note fails to upload: 2010/12/28
 # ------------------- to do! ----------------------
 # - do something with Private flag?
 # - deal with other export formats?
@@ -79,24 +80,33 @@ class PalmNoteImporter:
 			config.interimProgress("Created import notebook")
 		
 		#
-		# Create a new note in that notebook for each Palm note
+		# Create a new note in that notebook for each Palm note.
+		# Errors here should affect only that note, not kill the
+		# entire import process.
 		#
-		i = 0
-		n = len(parser.notes)
+		n_in = 0
+		n_out = 0
+		n_total = len(parser.notes)
 		for palmNote in parser.notes:
 			title = palmNote.title
 			body = palmNote.body
 			date = palmNote.dateModified * 1000
 			tags = EN.LookupTags(palmNote.categories)
 			# TODO: do anything with private flag?
-			createdNote = EN.CreateNotePlaintext(palmNotebook, title, body, date, tags)
-			i = i + 1
-			config.interimProgress("Created note %d/%d: %s" % (i, n, title))
+			try:
+				n_in = n_in + 1
+				createdNote = EN.CreateNotePlaintext(palmNotebook, title, body, date, tags)
+				n_out = n_out + 1
+				config.interimProgress("Created note %d/%d: %s" % (n_in, n_total, title))
+			except KeyboardInterrupt:
+				config.cancelled = True
+			except:
+				config.interimProgress("Failed note %d/%d: %s (%s)" % (n_in, n_total, title, sys.exc_value))
 
 			if config.cancelled:
-				return "Import cancelled (%d/%d complete)" % (i, n)
+				return "Import cancelled (%d/%d complete)" % (n_out, n_total)
 		
-		return "Import complete."
+		return "Import complete, %d/%d notes succeeded" % (n_out, n_total)
 
 #
 # If invoked directly, just run import logic.
