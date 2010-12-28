@@ -118,7 +118,6 @@ class PalmNoteImporter:
 # If invoked directly, just run import logic.
 #
 if __name__ == "__main__":
-	# TODO: read parameters from somewhere else instead of hardcoding
 	importer = PalmNoteImporter()
 	config = importer.Config()
 	def writeln(string):
@@ -133,7 +132,7 @@ if __name__ == "__main__":
 	parser.add_option("-p", "--password", dest="password",
 					  help="Evernote password")
 	parser.add_option("-e", "--encoding", dest="encoding",
-			                  help="Character encoding for export file")
+			                  help="Character encoding for export file (see http://docs.python.org/library/codecs.html#standard-encodings for valid values)")
 	parser.add_option("-t", "--test", dest="testServer", action="store_true",
 					  help="Connect to Evernote staging server")
 	(options, args) = parser.parse_args()
@@ -145,6 +144,7 @@ if __name__ == "__main__":
 	config.pdExportFilename = ((len(args) and args[0]) or
 							   os.getenv("en_palmfile") or
 							   raw_input("Palm Desktop memo export file: "))
+	# Note on valid encodings: see http://docs.python.org/library/codecs.html#standard-encodings
 	config.pdExportEncoding = (options.encoding or config.pdExportEncoding)
 
 	if options.testServer:
