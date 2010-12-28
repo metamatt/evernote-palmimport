@@ -13,6 +13,7 @@
 # - clean up layout: 2009/06/27
 # - add instructions, about panel: 2009/06/27
 # - tricked into running on Snow Leopard: 2010/07/08
+# TODO 2010/12/28: make prints go to app log (especially for newly caught exceptions), gui for character encoding
 # ------------------- to do! ----------------------
 # - make prettier UI?
 

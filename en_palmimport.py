@@ -12,6 +12,7 @@
 # - use categories from Palm as tags in Evernote: 2009/06/27
 # - add GUI (see wrapper EvernotePalmImporter.py): 2009/06/27
 # - continue when individual note fails to upload: 2010/12/28
+# - specify character encoding for Palm export file: 2010/12/28
 # ------------------- to do! ----------------------
 # - do something with Private flag?
 # - deal with other export formats?
@@ -41,6 +42,11 @@ class PalmNoteImporter:
 			self.cancelled = False
 			self.useLiveServer = True
 
+			if sys.platform == "win32":
+				self.pdExportEncoding = "windows-1252"
+			else:
+				self.pdExportEncoding = "latin-1"
+
 	def ImportNotes(self, config):
 		# Do all the work.
 		# Returns a string saying what happened.
@@ -64,7 +70,7 @@ class PalmNoteImporter:
 		# Open and parse Palm import file
 		#
 		parser = PalmDesktopNoteParser.PalmDesktopNoteParser()
-		error = parser.Open(config.pdExportFilename)
+		error = parser.Open(config.pdExportFilename, config.pdExportEncoding)
 		if error:
 			return error
 		config.interimProgress("Read " + str(len(parser.notes)) + " notes from export file")
@@ -126,6 +132,8 @@ if __name__ == "__main__":
 					  help="Evernote username")
 	parser.add_option("-p", "--password", dest="password",
 					  help="Evernote password")
+	parser.add_option("-e", "--encoding", dest="encoding",
+			                  help="Character encoding for export file")
 	parser.add_option("-t", "--test", dest="testServer", action="store_true",
 					  help="Connect to Evernote staging server")
 	(options, args) = parser.parse_args()
@@ -137,6 +145,8 @@ if __name__ == "__main__":
 	config.pdExportFilename = ((len(args) and args[0]) or
 							   os.getenv("en_palmfile") or
 							   raw_input("Palm Desktop memo export file: "))
+	config.pdExportEncoding = (options.encoding or config.pdExportEncoding)
+
 	if options.testServer:
 		config.useLiveServer = False
 

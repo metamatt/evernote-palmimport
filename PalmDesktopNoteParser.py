@@ -12,6 +12,7 @@
 # - added code to deal with dates: 2009/06/27
 # - added code to deal with Palm Desktop for Windows 6.2.2 export files: 2009/07/07
 # - rethought generation of note titles: 2009/07/12
+# - specify character encoding for Palm export file: 2010/12/28
 
 import sys
 import time
@@ -86,6 +87,12 @@ class PalmDesktopMacNote:
 	def ParsePalmDate(self, dateString):
 		# Parse a string date from the Palm format and return seconds since epoch
 		# Palm dates are in format "Month DD, YYYY"
+		# BUG: actually dates are localized and could be in different order or
+		# use non-English month names.  I've also seen components[2] throw a
+		# list-index-out-of-range exception, meaning the split didn't return
+		# 3 components, meaning (a) maybe separators other than space are possible
+		# and (b) maybe this was invoked on something that wasn't a date and in
+		# any case is too fragile.
 		components = dateString.split()
 		year = int(components[2])
 		day = int(components[1].rstrip(','))
@@ -240,11 +247,12 @@ class PalmDesktopNoteParser:
 		if self.file:
 			self.file.close()
 
-	def Sanitize(self):
+	def RemoveControlChars(self, s):
 		# Palm Desktop export files are either in ASCII or some unspecified local
-		# encoding; Evernote wants to see valid UTF-8; right now we don't deal
-		# with localized encodings so let's just assume ASCII and strip low-ASCII
-		# characters not allowed by XML.
+		# encoding; Evernote wants to see valid UTF-8; even after dealing with
+		# character encodings some low-ASCII character equivalents may remain
+		# which Evernote won't like, so let's strip low-ASCII characters not
+		# allowed by XML.
 		#
 		# That is, \n, \r and \t are allowed, anything else < 0x20 should be
 		# stripped.
@@ -255,11 +263,9 @@ class PalmDesktopNoteParser:
 		def SanitizeString(s):
 			return ''.join([c for c in s if c not in bad])
 
-		for note in self.notes:
-			note.title = SanitizeString(note.title)
-			note.body = SanitizeString(note.body)
+		return SanitizeString(s)
 		
-	def Open(self, filename):
+	def Open(self, filename, encoding):
 		# Returns a string explaining any problems that happened
 		# Otherwise populates self.notes
 		try:
@@ -268,7 +274,13 @@ class PalmDesktopNoteParser:
 			return "Unable to open '%s': %s" % (filename, sys.exc_info()[1])
 		
 		try:
+			print "Reading export file '%s' with encoding '%s'" % (filename, encoding)
 			data = self.file.read()
+			# Need to know data encoding so we can transform to utf-8
+			# Note on good guesses: latin-1 and windows-1252 will be common
+			data = data.decode(encoding)
+			data = data.encode('utf-8')
+			data = self.RemoveControlChars(data)
 			
 			# first try to parse Mac format
 			macNoteParser = PalmDesktopMacNoteParser()
@@ -290,8 +302,6 @@ class PalmDesktopNoteParser:
 			e = sys.exc_info()
 			traceback.print_exception(e[0], e[1], e[2])
 			print "Exception thrown"
-
-		self.Sanitize()
 
 		if len(self.notes):
 			return None
