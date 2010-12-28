@@ -128,12 +128,16 @@ class EvernoteManager:
 		return None
 
 	def CreateNotePlaintext(self, notebook, title, body, date, tags):
+		# Evernote API expects that strings are XML-escaped UTF-8; we'll do the XML
+		# escaping here, but we expect that title and body are already well-formed
+		# Unicode strings encoded in UTF-8.
 		noteStore = self.GetNoteStore()
 		token = self.authResult.authenticationToken
 		
 		# Need to convert body to well-formed XML:
 		# - escape entities, etc
 		# - change \n to <br/>
+		title = xml.sax.saxutils.escape(title)
 		bodyXML = ""
 		for line in body.split('\n'):
 			bodyXML += xml.sax.saxutils.escape(line) + "<br/>"
