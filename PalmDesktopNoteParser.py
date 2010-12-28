@@ -239,6 +239,25 @@ class PalmDesktopNoteParser:
 	def __del__(self):
 		if self.file:
 			self.file.close()
+
+	def Sanitize(self):
+		# Palm Desktop export files are either in ASCII or some unspecified local
+		# encoding; Evernote wants to see valid UTF-8; right now we don't deal
+		# with localized encodings so let's just assume ASCII and strip low-ASCII
+		# characters not allowed by XML.
+		#
+		# That is, \n, \r and \t are allowed, anything else < 0x20 should be
+		# stripped.
+		bad = ''.join([chr(c) for c in xrange(32)])
+		actuallyGood = '\n\r\t'
+		bad = ''.join([c for c in bad if c not in actuallyGood])
+
+		def SanitizeString(s):
+			return ''.join([c for c in s if c not in bad])
+
+		for note in self.notes:
+			note.title = SanitizeString(note.title)
+			note.body = SanitizeString(note.body)
 		
 	def Open(self, filename):
 		# Returns a string explaining any problems that happened
@@ -271,6 +290,8 @@ class PalmDesktopNoteParser:
 			e = sys.exc_info()
 			traceback.print_exception(e[0], e[1], e[2])
 			print "Exception thrown"
+
+		self.Sanitize()
 
 		if len(self.notes):
 			return None
