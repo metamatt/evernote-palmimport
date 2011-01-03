@@ -13,6 +13,9 @@
 # - added code to deal with Palm Desktop for Windows 6.2.2 export files: 2009/07/07
 # - rethought generation of note titles: 2009/07/12
 # - specify character encoding for Palm export file: 2010/12/28
+# ------------------- to do! ----------------------
+# - deal with dates in locales other than EN_us
+# - attempt autodetect of character encoding?
 
 import sys
 import time

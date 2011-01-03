@@ -1,12 +1,14 @@
 # EvernoteManager.py
 # (c) 2009 Matt Ginzton, matt@maddogsw.com
 #
-# Python class to wrap some of the details of connecting to the Evernote service.
+# Python class to wrap some of the details of connecting to the Evernote
+# service.
 #
 # Changelog:
 # - basic functionality: 2009/06/26
 # - added tag functionality: 2009/06/27
 # - taught to force well-formed note titles: 2009/07/12
+# - also XML-escape note title: 2010/12/28
 
 
 #
