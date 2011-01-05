@@ -13,7 +13,7 @@
 # - clean up layout: 2009/06/27
 # - add instructions, about panel: 2009/06/27
 # - tricked into running on Snow Leopard: 2010/07/08
-# TODO 2010/12/28: make prints go to app log (especially for newly caught exceptions), gui for character encoding
+# TODO 2010/12/28: gui for character encoding
 # ------------------- to do! ----------------------
 # - make prettier UI?
 
@@ -45,7 +45,8 @@ class PalmImporterUI(wx.Frame):
 
 	THREAD_RESULT_ID = wx.NewId()
 
-	def __init__(self, parent, id):
+	def __init__(self, parent, id, config):
+		self.config = config
 		wx.Frame.__init__(self, parent, id, "Evernote Palm importer")
 		self.controls = []
 
@@ -70,7 +71,7 @@ class PalmImporterUI(wx.Frame):
 		self.controls.append(wx.StaticText(panel1, -1, "Password"))
 		grid1.Add(self.controls[-1])
 		self.controls.append(wx.TextCtrl(panel1, self.ID_PASSWORD, "",
-										 style = wx.TE_PASSWORD))
+						 style = wx.TE_PASSWORD))
 		self.password = self.controls[-1]
 		grid1.Add(self.controls[-1])
 		sizer1a.Add(grid1)
@@ -100,8 +101,8 @@ class PalmImporterUI(wx.Frame):
 		panel2 = wx.Panel(panel, -1)
 		sizer2 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Palm Desktop note export location'))
 		self.controls.append(wx.lib.filebrowsebutton.FileBrowseButton(panel2, self.ID_FILEBROWSE,
-																	 labelText = "Exported file",
-																	 changeCallback = self.OnTextFieldChange))
+									      labelText = "Exported file",
+									      changeCallback = self.OnTextFieldChange))
 		self.filename = self.controls[-1]
 		sizer2.Add(self.controls[-1], 1, wx.EXPAND)
 		panel2.SetSizer(sizer2)
@@ -118,7 +119,7 @@ class PalmImporterUI(wx.Frame):
 		panel4 = wx.Panel(panel, -1)
 		sizer4 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Status'))
 		self.controls.append(wx.StaticText(panel4, self.ID_STATUS,
-										   "Enter Evernote credentials, specify Palm Desktop export file, and press Import."))
+						   "Enter Evernote credentials, specify Palm Desktop export file, and press Import."))
 		self.statusLabel = self.controls[-1]
 		sizer4.Add(self.controls[-1], 1, wx.ALL | wx.EXPAND, 5)
 		panel4.SetSizer(sizer4)
@@ -134,6 +135,10 @@ class PalmImporterUI(wx.Frame):
 		wx.EVT_BUTTON(self, self.ID_IMPORT, self.OnClickImport)
 		self.importButton.SetDefault()
 		self.importButton.Enable(False)
+
+		self.username.SetValue(config.enUsername)
+		self.password.SetValue(config.enPassphrase)
+		self.filename.SetValue(config.pdExportFilename)
 		
 		self.worker = None
 		self.importing = False
@@ -141,11 +146,12 @@ class PalmImporterUI(wx.Frame):
 	
 	def OnClickImport(self, event):
 		if not self.importing:
-			enUsername = self.username.GetValue()
-			enPassphrase = self.password.GetValue()
-			pdExportFilename = self.filename.GetValue()
+			config = self.config
+			config.enUsername = self.username.GetValue()
+			config.enPassphrase = self.password.GetValue()
+			config.pdExportFilename = self.filename.GetValue()
 			self.importButton.SetLabel("Stop importing")
-			self.worker = PalmImporterUI.ImporterThread(self, enUsername, enPassphrase, pdExportFilename)
+			self.worker = PalmImporterUI.ImporterThread(self, config)
 		else:
 			self.importButton.SetLabel("Cancelling...")
 			self.worker.stop()
@@ -170,15 +176,12 @@ class PalmImporterUI(wx.Frame):
 			self.data = [stillGoing, statusMsg]
 	
 	class ImporterThread(Thread):
-		def __init__(self, notifyWindow, enUsername, enPassphrase, pdExportFilename):
+		def __init__(self, notifyWindow, config):
 			Thread.__init__(self)
 			self.notifyWindow = notifyWindow
 			self.importer = PalmNoteImporter()
-			self.config = self.importer.Config()
+			self.config = config
 			self.config.cancelled = False
-			self.config.enUsername = enUsername
-			self.config.enPassphrase = enPassphrase
-			self.config.pdExportFilename = pdExportFilename
 			self.config.interimProgress = self.interimProgress
 			self.start()
 		
@@ -205,5 +208,10 @@ class PalmImporterUI(wx.Frame):
 #
 if __name__ == "__main__":
 	app = wx.PySimpleApp()
-	frame = PalmImporterUI(None, wx.ID_ANY)
+
+	config = PalmNoteImporter().Config()
+	config.ParseOptions()
+
+	frame = PalmImporterUI(None, wx.ID_ANY, config)
+
 	app.MainLoop()

@@ -24,6 +24,7 @@
 import os
 import sys
 import time
+import traceback
 from optparse import OptionParser
 import EvernoteManager
 import PalmDesktopNoteParser
@@ -46,6 +47,37 @@ class PalmNoteImporter:
 				self.pdExportEncoding = "windows-1252"
 			else:
 				self.pdExportEncoding = "latin-1"
+
+		def ParseOptions(self):
+			# look on command line, then environment, to determine parameters
+			parser = OptionParser()
+			parser.add_option("-u", "--username", dest="username",
+					  help="Evernote username")
+			parser.add_option("-p", "--password", dest="password",
+					  help="Evernote password")
+			parser.add_option("-e", "--encoding", dest="encoding",
+			                  help="Character encoding for export file (see http://docs.python.org/library/codecs.html#standard-encodings for valid values)")
+			parser.add_option("-t", "--test", dest="testServer", action="store_true",
+					  help="Connect to Evernote staging server")
+
+			(options, args) = parser.parse_args()
+
+			self.enUsername = (options.username or os.getenv("en_username") or "")
+			self.enPassphrase = (options.password or os.getenv("en_password") or "")
+			self.pdExportFilename = ((len(args) and args[0]) or os.getenv("en_palmfile") or "")
+			# Note on valid encodings: see http://docs.python.org/library/codecs.html#standard-encodings
+			self.pdExportEncoding = (options.encoding or self.pdExportEncoding)
+			if options.testServer:
+				self.useLiveServer = False
+
+		def FinalizeNonGuiOptions(self):
+			# fill in required missing parameters from raw-input
+			if not len(self.enUsername):
+				self.enUsername = raw_input("Evernote username: ")
+			if not len(self.enPassphrase):
+				self.enPassphrase = raw_input("Evernote password: ")
+			if not len(self.pdExportFilename):
+				self.pdExportFilename = raw_input("Palm Desktop memo export file: ")
 
 	def ImportNotes(self, config):
 		# Do all the work.
@@ -107,7 +139,11 @@ class PalmNoteImporter:
 			except KeyboardInterrupt:
 				config.cancelled = True
 			except:
-				config.interimProgress("Failed note %d/%d: %s (%s)" % (n_in, n_total, title, sys.exc_value))
+				exc_value = sys.exc_info()[1]
+				msg = "Failed note %d/%d: %s (%s)" % (n_in, n_total, title, exc_value)
+				sys.stderr.write("\n\n" + msg + "\n\n")
+				traceback.print_exc(file=sys.stderr)
+				config.interimProgress(msg)
 
 			if config.cancelled:
 				return "Import cancelled (%d/%d complete)" % (n_out, n_total)
@@ -120,35 +156,12 @@ class PalmNoteImporter:
 if __name__ == "__main__":
 	importer = PalmNoteImporter()
 	config = importer.Config()
+	config.ParseOptions()
+	config.FinalizeNonGuiOptions()
+
 	def writeln(string):
 		sys.stdout.write(string + "\n")
 	config.interimProgress = writeln
-
-	# look on command line, then environment, then raw-input, in that order
-	# to determine parameters
-	parser = OptionParser()
-	parser.add_option("-u", "--username", dest="username",
-					  help="Evernote username")
-	parser.add_option("-p", "--password", dest="password",
-					  help="Evernote password")
-	parser.add_option("-e", "--encoding", dest="encoding",
-			                  help="Character encoding for export file (see http://docs.python.org/library/codecs.html#standard-encodings for valid values)")
-	parser.add_option("-t", "--test", dest="testServer", action="store_true",
-					  help="Connect to Evernote staging server")
-	(options, args) = parser.parse_args()
-
-	config.enUsername = (options.username or os.getenv("en_username") or
-						 raw_input("Evernote username: "))
-	config.enPassphrase = (options.password or os.getenv("en_password") or
-						   raw_input("Evernote password: "))
-	config.pdExportFilename = ((len(args) and args[0]) or
-							   os.getenv("en_palmfile") or
-							   raw_input("Palm Desktop memo export file: "))
-	# Note on valid encodings: see http://docs.python.org/library/codecs.html#standard-encodings
-	config.pdExportEncoding = (options.encoding or config.pdExportEncoding)
-
-	if options.testServer:
-		config.useLiveServer = False
 
 	result = importer.ImportNotes(config)
 	print result
