@@ -13,7 +13,8 @@
 # - clean up layout: 2009/06/27
 # - add instructions, about panel: 2009/06/27
 # - tricked into running on Snow Leopard: 2010/07/08
-# TODO 2010/12/28: gui for character encoding
+# - added support for parsing command line options: 2011/01/04
+# - added gui for character encoding: 2011/01/04
 # ------------------- to do! ----------------------
 # - make prettier UI?
 
@@ -55,6 +56,7 @@ class PalmImporterUI(wx.Frame):
 		self.ID_FILEBROWSE = wx.NewId()
 		self.ID_IMPORT = wx.NewId()
 		self.ID_STATUS = wx.NewId()
+		self.ID_ENCODING = wx.NewId()
 
 		vbox = wx.BoxSizer(wx.VERTICAL)
 		panel = wx.Panel(self, -1)
@@ -65,12 +67,12 @@ class PalmImporterUI(wx.Frame):
 		grid1 = wx.GridSizer(2, 2, 5, 5)
 		self.controls.append(wx.StaticText(panel1, -1, "Username"))
 		grid1.Add(self.controls[-1])
-		self.controls.append(wx.TextCtrl(panel1, self.ID_USERNAME, ""))
+		self.controls.append(wx.TextCtrl(panel1, self.ID_USERNAME, config.enUsername))
 		self.username = self.controls[-1]
 		grid1.Add(self.controls[-1])
 		self.controls.append(wx.StaticText(panel1, -1, "Password"))
 		grid1.Add(self.controls[-1])
-		self.controls.append(wx.TextCtrl(panel1, self.ID_PASSWORD, "",
+		self.controls.append(wx.TextCtrl(panel1, self.ID_PASSWORD, config.enPassphrase,
 						 style = wx.TE_PASSWORD))
 		self.password = self.controls[-1]
 		grid1.Add(self.controls[-1])
@@ -78,7 +80,7 @@ class PalmImporterUI(wx.Frame):
 		sizer1.Add(sizer1a, 0, wx.RIGHT, 10)
 		sizer1b = wx.StaticBoxSizer(wx.StaticBox(panel1, -1, 'About this program'))
 		vbox1 = wx.BoxSizer(wx.VERTICAL)
-		vbox1.Add(wx.StaticText(panel1, -1, "Note importer (c) 2009 Matt Ginzton, matt@maddogsw.com."))
+		vbox1.Add(wx.StaticText(panel1, -1, "Note importer (c) 2011 Matt Ginzton, matt@maddogsw.com."))
 		vbox1.Add(wx.StaticText(panel1, -1, "Palm and Evernote may be trademarks of their respective companies."))
 		vbox1Links = wx.BoxSizer(wx.HORIZONTAL)
 		#vbox1Links.Add(wx.StaticText(panel1, -1, "Like this? "))
@@ -99,12 +101,20 @@ class PalmImporterUI(wx.Frame):
 		vbox.Add(panel1, 0, wx.LEFT | wx.RIGHT | wx.TOP | wx.BOTTOM, 15)
 
 		panel2 = wx.Panel(panel, -1)
-		sizer2 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Palm Desktop note export location'))
-		self.controls.append(wx.lib.filebrowsebutton.FileBrowseButton(panel2, self.ID_FILEBROWSE,
-									      labelText = "Exported file",
-									      changeCallback = self.OnTextFieldChange))
-		self.filename = self.controls[-1]
-		sizer2.Add(self.controls[-1], 1, wx.EXPAND)
+		sizer2 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Palm Desktop note export location'), wx.VERTICAL)
+		sizer2a = wx.BoxSizer(wx.VERTICAL)
+		self.filename = wx.lib.filebrowsebutton.FileBrowseButton(panel2, self.ID_FILEBROWSE,
+									 labelText = "Exported file",
+									 changeCallback = self.OnTextFieldChange)
+		sizer2a.Add(self.filename, 0, wx.EXPAND)
+		sizer2aa = wx.BoxSizer(wx.HORIZONTAL)
+		sizer2aa.Add(wx.StaticText(panel2, -1, "Character encoding"))
+		self.encoding = wx.TextCtrl(panel2, self.ID_ENCODING, config.pdExportEncoding)
+		sizer2aa.Add(self.encoding, 0, wx.EXPAND)
+		self.encodingLink = wx.HyperlinkCtrl(panel2, -1, "list of valid encodings", "http://docs.python.org/library/codecs.html#standard-encodings")
+		sizer2aa.Add(self.encodingLink)
+		sizer2a.Add(sizer2aa, 0, wx.EXPAND)
+		sizer2.Add(sizer2a, 0, wx.EXPAND)
 		panel2.SetSizer(sizer2)
 		vbox.Add(panel2, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 15)
 
@@ -136,10 +146,8 @@ class PalmImporterUI(wx.Frame):
 		self.importButton.SetDefault()
 		self.importButton.Enable(False)
 
-		self.username.SetValue(config.enUsername)
-		self.password.SetValue(config.enPassphrase)
 		self.filename.SetValue(config.pdExportFilename)
-		
+
 		self.worker = None
 		self.importing = False
 		self.Connect(-1, -1, PalmImporterUI.THREAD_RESULT_ID, self.OnThreadResult)
