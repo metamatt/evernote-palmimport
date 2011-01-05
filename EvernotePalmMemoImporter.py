@@ -158,6 +158,7 @@ class PalmImporterUI(wx.Frame):
 			config.enUsername = self.username.GetValue()
 			config.enPassphrase = self.password.GetValue()
 			config.pdExportFilename = self.filename.GetValue()
+			config.pdExportEncoding = self.encoding.GetValue()
 			self.importButton.SetLabel("Stop importing")
 			self.worker = PalmImporterUI.ImporterThread(self, config)
 		else:
