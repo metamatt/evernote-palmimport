@@ -85,8 +85,8 @@ class EvernoteManager:
 
 		user = self.authResult.user
 		authToken = self.authResult.authenticationToken
-		print "Authentication was successful for ", user.username
-		print "Authentication token = ", authToken
+		print "Authentication was successful for " + user.username
+		print "Authentication token = " + authToken
 		return [True, ""]
 
 	def GetNoteStore(self):

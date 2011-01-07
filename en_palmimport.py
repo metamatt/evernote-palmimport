@@ -14,6 +14,7 @@
 # - continue when individual note fails to upload: 2010/12/28
 # - specify character encoding for Palm export file: 2010/12/28
 # - refactored support for parsing command line options: 2011/01/04
+# - allow locale specified on command line: 2011/01/07
 # ------------------- to do! ----------------------
 # - do something with Private flag?
 # - deal with other export formats?
@@ -22,6 +23,7 @@
 #
 # Python modules we use
 #
+import locale
 import os
 import sys
 import time
@@ -40,6 +42,7 @@ class PalmNoteImporter:
 			self.enUsername = None
 			self.enPassphrase = None
 			self.pdExportFilename = None
+			self.locale = ''
 			self.interimProgress = None
 			self.cancelled = False
 			self.useLiveServer = True
@@ -60,12 +63,15 @@ class PalmNoteImporter:
 			                  help="Character encoding for export file (see http://docs.python.org/library/codecs.html#standard-encodings for valid values)")
 			parser.add_option("-t", "--test", dest="testServer", action="store_true",
 					  help="Connect to Evernote staging server")
+			parser.add_option("-l", "--locale", dest="locale",
+					  help="Set locale used for interpreting dates in Mac-format export files")
 
 			(options, args) = parser.parse_args()
 
 			self.enUsername = (options.username or os.getenv("en_username") or "")
 			self.enPassphrase = (options.password or os.getenv("en_password") or "")
 			self.pdExportFilename = ((len(args) and args[0]) or os.getenv("en_palmfile") or "")
+			self.locale = (options.locale or self.locale)
 			# Note on valid encodings: see http://docs.python.org/library/codecs.html#standard-encodings
 			self.pdExportEncoding = (options.encoding or self.pdExportEncoding)
 			if options.testServer:
@@ -104,6 +110,7 @@ class PalmNoteImporter:
 		#
 		# Open and parse Palm import file
 		#
+		locale.setlocale(locale.LC_TIME, config.locale)
 		parser = PalmDesktopNoteParser.PalmDesktopNoteParser()
 		error = parser.Open(config.pdExportFilename, config.pdExportEncoding)
 		if error:

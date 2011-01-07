@@ -14,24 +14,19 @@
 # - rethought generation of note titles: 2009/07/12
 # - specify character encoding for Palm export file: 2010/12/28
 # - Windows-format notes field is comma-separated list: 2011/01/06
+# - more robust date parsing, attempt to deal with dates in any locale: 2011/01/07
 # ------------------- to do! ----------------------
-# - deal with dates in locales other than EN_us
 # - attempt autodetect of character encoding?
 
+import re
 import sys
 import time
 import traceback
 
 
 class PalmDesktopMacNote:
-	def GenerateMonthLUT():
-		def monthname(m):
-			return time.strftime("%B", [0, m, 0, 0, 0, 0, 0, 0, 0])
-		d = dict((monthname(m), m) for m in range(1, 13))
-		return d
-	monthLookup = GenerateMonthLUT()
-
-	def __init__(self, line):
+	def __init__(self, line, parser):
+		self.monthLookup = parser.monthLookup
 		self.happy = self.ParseOne(line)
 		
 	def ParseOne(self, line):
@@ -45,8 +40,6 @@ class PalmDesktopMacNote:
 		#
 		# Format is: tab separated values
 		# Multiline freeform text has newlines replaced by ascii 0xa6, Mac shows this as pipelike character
-		
-		#self.monthLookup = self.GenerateMonthLUT()
 		
 		encodedEntries = line.split('\t')
 		if len(encodedEntries) != 8:
@@ -84,27 +77,45 @@ class PalmDesktopMacNote:
 		self.body = entries[0] + "\n" + entries[1]
 		# Other fields:
 		self.dateModified = self.ParsePalmDate(entries[4])
+		if not self.dateModified:
+			return False
 		self.categories = [entries[5], entries[6]]
-		self.private = entries[7]
+		self.private = entries[7] # BUG: this is written in the local language
 		return True
 
 	def ParsePalmDate(self, dateString):
 		# Parse a string date from the Palm format and return seconds since epoch
-		# Palm dates are in format "Month DD, YYYY"
-		# BUG: actually dates are localized and could be in different order or
-		# use non-English month names.  I've also seen components[2] throw a
-		# list-index-out-of-range exception, meaning the split didn't return
-		# 3 components, meaning (a) maybe separators other than space are possible
-		# and (b) maybe this was invoked on something that wasn't a date and in
-		# any case is too fragile.
-		components = dateString.split()
+		# Palm dates are in format "Month DD, YYYY", in English files.
+		# Or in format "DD month YYYY", in French files.  I'm sure other orders
+		# are possible in other locales, but for now, just assume the year comes
+		# last, the fields are separated by whitespace and/or commas, and
+		splitter = re.compile(r'[, ] *')
+		components = splitter.split(dateString)
+		if len(components) != 3:
+			return None
 		year = int(components[2])
-		day = int(components[1].rstrip(','))
-		month = PalmDesktopMacNote.monthLookup[components[0]]
-		return time.mktime([year, month, day, 12, 0, 0, 0, 0, -1])
-		
+		month = day = None
+		if components[0] in self.monthLookup:
+			month = self.monthLookup[components[0]]
+			day = int(components[1])
+		elif components[1] in self.monthLookup:
+			month = self.monthLookup[components[1]]
+			day = int(components[0])
+		if year and month and day:
+			return time.mktime([year, month, day, 12, 0, 0, 0, 0, -1])
+		else:
+			return None
+
 
 class PalmDesktopMacNoteParser:
+	def __init__(self):
+		self.GenerateMonthLUT()
+
+	def GenerateMonthLUT(self):
+		def monthname(m):
+			return time.strftime("%B", [0, m, 0, 0, 0, 0, 0, 0, 0])
+		self.monthLookup = dict((monthname(m), m) for m in range(1, 13))
+
 	def ParseMany(self, data):
 		lines = data.split('\r')
 		notes = []
@@ -113,7 +124,7 @@ class PalmDesktopMacNoteParser:
 			if (len(line) == 0):
 				continue
 
-			note = PalmDesktopMacNote(line)
+			note = PalmDesktopMacNote(line, self)
 			if note.happy:
 				notes.append(note)
 		return notes
