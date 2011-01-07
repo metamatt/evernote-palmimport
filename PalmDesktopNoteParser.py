@@ -39,24 +39,17 @@ class PalmDesktopMacNote:
 		# (My notes don't have values in the "time" or "date" fields, but do have a date in "modified".)
 		#
 		# Format is: tab separated values
-		# Multiline freeform text has newlines replaced by ascii 0xa6, Mac shows this as pipelike character
+		# Multiline freeform text has newlines replaced by ascii 0xA6; Mac shows this as pipelike character.
+		# (Note that after decode from latin-1, the 0xA6 byte has become U+C2, and after re-encode to UTF-8
+		# it's two bytes, \xC2\xA6.)
 		
 		encodedEntries = line.split('\t')
 		if len(encodedEntries) != 8:
 			return False
 
-		separator = chr(0xA6)
 		entries = []
 		for entry in encodedEntries:
-			# I would do this with "replace", but I can't figure out what the encoding is to let
-			# Python operate on it as unicode, and Python doesn't like high ascii as ascii, so
-			# I'll just split and rejoin myself.
-			#      separator = u'\xA6'
-			#      entry = unicode(entry, "iso-8859-1")
-			#      entry.replace(separator, '\n')
-			lines = entry.split(separator)
-			entry = '\n'.join(lines)
-			#print "..." + entry + "..."
+			entry = entry.replace('\xC2\xA6', '\n')
 			entries.append(entry)
 		#print "Note with " + str(len(encodedEntries)) + " fields"
 
