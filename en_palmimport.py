@@ -92,11 +92,13 @@ class PalmNoteImporter:
 		EN = EvernoteManager.EvernoteManager()
 		if config.useLiveServer:
 			EN.UseLiveServer()
-		EN.Connect()
-		if EN.Authenticate(config.enUsername, config.enPassphrase):
-			config.interimProgress("Connected to Evernote as " + config.enUsername)
-		else:
-			return "Failed to connect to Evernote."
+		(result, err) = EN.Connect()
+		if not result:
+			return "Failed to connect to Evernote: " + err
+		(result, err) = EN.Authenticate(config.enUsername, config.enPassphrase)
+		if not result:
+			return "Failed to authenticate to Evernote: " + err
+		config.interimProgress("Connected to Evernote as " + config.enUsername)
 		notebooks = EN.GetNotebooks()
 		
 		#

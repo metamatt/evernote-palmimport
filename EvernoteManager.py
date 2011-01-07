@@ -11,10 +11,11 @@
 # - also XML-escape note title: 2010/12/28
 
 
+import sys
+import traceback
 #
 # Force Python to notice local-embedded Evernote API libs
 #
-import sys
 sys.path.append('./lib')
 #
 # Python modules we use
@@ -53,34 +54,40 @@ class EvernoteManager:
 	def Connect(self):
 		# Connect to Evernote and check version
 		# Side effects: caches user store
-		# Result: success/fail as true/false
-		userStoreUri = "https://" + self._edamHost + "/edam/user"
-		print "Evernote service URL: " + userStoreUri
-		userStoreHttpClient = THttpClient.THttpClient(userStoreUri)
-		userStoreProtocol = TBinaryProtocol.TBinaryProtocol(userStoreHttpClient)
-		self.userStore = UserStore.Client(userStoreProtocol)
+		# Result: tuple with success/fail as true/false, followed by error message if any
+		try:
+			userStoreUri = "https://" + self._edamHost + "/edam/user"
+			print "Evernote service URL: " + userStoreUri
+			userStoreHttpClient = THttpClient.THttpClient(userStoreUri)
+			userStoreProtocol = TBinaryProtocol.TBinaryProtocol(userStoreHttpClient)
+			self.userStore = UserStore.Client(userStoreProtocol)
 		
-		versionOK = self.userStore.checkVersion("Python EDAMTest",
-		                                       UserStoreConstants.EDAM_VERSION_MAJOR,
-		                                       UserStoreConstants.EDAM_VERSION_MINOR)
+			versionOK = self.userStore.checkVersion("com.maddogsw.en_palmimport",
+								UserStoreConstants.EDAM_VERSION_MAJOR,
+								UserStoreConstants.EDAM_VERSION_MINOR)
+		except:
+			traceback.print_exc(file=sys.stderr)
+			return [False, str(sys.exc_info()[1])]
+			
 		print "Is my EDAM protocol version up to date? ", str(versionOK)
-		return versionOK
+		return [versionOK, "API version error"]
 
 	def Authenticate(self, username, password):
 		# Authenticate against userStore
 		# Side effects: caches auth token
-		# Result: success/fail as true/false
+		# Result: tuple with success/fail as true/false, followed by error message if any
 		try:
 			self.authResult = self.userStore.authenticate(username, password,
-		    	                                          self._consumerKey, self._consumerSecret)
+								      self._consumerKey, self._consumerSecret)
 		except:
-			return False
+			traceback.print_exc(file=sys.stderr)
+			return [False, str(sys.exc_info()[1])]
 
 		user = self.authResult.user
 		authToken = self.authResult.authenticationToken
 		print "Authentication was successful for ", user.username
 		print "Authentication token = ", authToken
-		return True
+		return [True, ""]
 
 	def GetNoteStore(self):
 		# Returns note store
