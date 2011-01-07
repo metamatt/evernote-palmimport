@@ -13,6 +13,7 @@
 # - added code to deal with Palm Desktop for Windows 6.2.2 export files: 2009/07/07
 # - rethought generation of note titles: 2009/07/12
 # - specify character encoding for Palm export file: 2010/12/28
+# - Windows-format notes field is comma-separated list: 2011/01/06
 # ------------------- to do! ----------------------
 # - deal with dates in locales other than EN_us
 # - attempt autodetect of character encoding?
@@ -173,7 +174,9 @@ class PalmDesktopWinNote:
 			self.private = "Private"
 		else:
 			self.private = "Not Private"
-		self.categories = [strings[2]]
+		self.categories = []
+		for category in strings[2].split(','):
+			self.categories.append(category.strip())
 		self.dateModified = time.time() # Fake it and use right now, since there is no timestamp in the export data
 		return True
 

@@ -13,6 +13,7 @@
 # - add GUI (see wrapper EvernotePalmImporter.py): 2009/06/27
 # - continue when individual note fails to upload: 2010/12/28
 # - specify character encoding for Palm export file: 2010/12/28
+# - refactored support for parsing command line options: 2011/01/04
 # ------------------- to do! ----------------------
 # - do something with Private flag?
 # - deal with other export formats?
@@ -126,12 +127,13 @@ class PalmNoteImporter:
 		n_out = 0
 		n_total = len(parser.notes)
 		for palmNote in parser.notes:
-			title = palmNote.title
-			body = palmNote.body
-			date = palmNote.dateModified * 1000
-			tags = EN.LookupTags(palmNote.categories)
-			# TODO: do anything with private flag?
 			try:
+				title = palmNote.title
+				body = palmNote.body
+				date = palmNote.dateModified * 1000
+				tags = EN.LookupTags(palmNote.categories)
+				# TODO: do anything with private flag?
+
 				n_in = n_in + 1
 				createdNote = EN.CreateNotePlaintext(palmNotebook, title, body, date, tags)
 				n_out = n_out + 1
