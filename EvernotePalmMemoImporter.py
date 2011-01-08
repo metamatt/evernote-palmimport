@@ -140,12 +140,11 @@ class PalmImporterUI(wx.Frame):
 
 		panel4 = wx.Panel(panel, -1)
 		sizer4 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Status'))
-		self.controls.append(wx.StaticText(panel4, self.ID_STATUS,
-						   "Enter Evernote credentials, specify Palm Desktop export file, and press Import."))
-		self.statusLabel = self.controls[-1]
-		sizer4.Add(self.controls[-1], 1, wx.ALL | wx.EXPAND, 5)
+		self.statusLabel = wx.ListBox(panel4, self.ID_STATUS)
+		sizer4.Add(self.statusLabel, 1, wx.ALL | wx.EXPAND, 5)
+		self.Report("Enter Evernote credentials, specify Palm Desktop export file, and press Import.")
 		panel4.SetSizer(sizer4)
-		vbox.Add(panel4, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 15)
+		vbox.Add(panel4, 1, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 15)
 
 		panel.SetSizer(vbox)
 		vbox.Fit(self)
@@ -182,6 +181,9 @@ class PalmImporterUI(wx.Frame):
 		else:
 			self.defaultLocale = defLocale
 
+	def Report(self, status):
+		self.statusLabel.AppendAndEnsureVisible(status)
+
 	def OnClickImport(self, event):
 		if not self.importing:
 			config = self.config
@@ -190,9 +192,11 @@ class PalmImporterUI(wx.Frame):
 			config.pdExportFilename = self.filename.GetValue()
 			config.pdExportEncoding = self.encoding.GetValue()
 			config.locale = str(self.locale.GetStringSelection())
+			self.Report("Import process beginning.")
 			self.importButton.SetLabel("Stop importing")
 			self.worker = PalmImporterUI.ImporterThread(self, config)
 		else:
+			self.Report("Cancelling import process.")
 			self.importButton.SetLabel("Cancelling...")
 			self.worker.stop()
 			
@@ -205,8 +209,9 @@ class PalmImporterUI(wx.Frame):
 	def OnThreadResult(self, event):
 		(stillGoing, statusMsg) = event.data
 		self.importing = stillGoing
-		self.statusLabel.SetLabel(statusMsg)
+		self.Report(statusMsg)
 		if not self.importing:
+			self.Report("Import process complete.")
 			self.importButton.SetLabel("Import notes")
 	
 	class ResultEvent(wx.PyEvent):
