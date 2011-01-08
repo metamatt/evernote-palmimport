@@ -110,6 +110,7 @@ class PalmNoteImporter:
 		#
 		# Open and parse Palm import file
 		#
+		sys.stdout.write("Using locale '%s' for date parsing\n" % config.locale)
 		locale.setlocale(locale.LC_TIME, config.locale)
 		parser = PalmDesktopNoteParser.PalmDesktopNoteParser()
 		error = parser.Open(config.pdExportFilename, config.pdExportEncoding)

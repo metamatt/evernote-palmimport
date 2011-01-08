@@ -15,6 +15,7 @@
 # - tricked into running on Snow Leopard: 2010/07/08
 # - added support for parsing command line options: 2011/01/04
 # - added gui for character encoding: 2011/01/04
+# - added gui for locale used for date parsing: 2011/01/07
 # ------------------- to do! ----------------------
 # - make prettier UI?
 
@@ -33,6 +34,7 @@ if platform.system() == 'Darwin':
 #
 # Python modules we use
 #
+import locale
 import sys
 import traceback
 from en_palmimport import PalmNoteImporter
@@ -48,16 +50,20 @@ class PalmImporterUI(wx.Frame):
 
 	def __init__(self, parent, id, config):
 		self.config = config
+		self.InitLocale()
 		wx.Frame.__init__(self, parent, id, "Evernote Palm importer")
-		self.controls = []
 
+		# IDs used for controls we'll interact with more than once
 		self.ID_USERNAME = wx.NewId()
 		self.ID_PASSWORD = wx.NewId()
 		self.ID_FILEBROWSE = wx.NewId()
 		self.ID_IMPORT = wx.NewId()
 		self.ID_STATUS = wx.NewId()
 		self.ID_ENCODING = wx.NewId()
+		self.ID_LOCALE = wx.NewId()
 
+		# create and lay out GUI controls
+		self.controls = []
 		vbox = wx.BoxSizer(wx.VERTICAL)
 		panel = wx.Panel(self, -1)
 
@@ -110,10 +116,16 @@ class PalmImporterUI(wx.Frame):
 		sizer2aa = wx.BoxSizer(wx.HORIZONTAL)
 		sizer2aa.Add(wx.StaticText(panel2, -1, "Character encoding"))
 		self.encoding = wx.TextCtrl(panel2, self.ID_ENCODING, config.pdExportEncoding)
-		sizer2aa.Add(self.encoding, 0, wx.EXPAND)
+		sizer2aa.Add(self.encoding, 1, wx.EXPAND)
 		self.encodingLink = wx.HyperlinkCtrl(panel2, -1, "list of valid encodings", "http://docs.python.org/library/codecs.html#standard-encodings")
 		sizer2aa.Add(self.encodingLink)
 		sizer2a.Add(sizer2aa, 0, wx.EXPAND)
+		sizer2ab = wx.BoxSizer(wx.HORIZONTAL)
+		sizer2ab.Add(wx.StaticText(panel2, -1, "Locale used for date parsing"))
+		self.locale = wx.Choice(panel2, self.ID_LOCALE, choices=self.validLocales)
+		self.locale.SetSelection(self.locale.FindString(self.defaultLocale))
+		sizer2ab.Add(self.locale, 0, wx.EXPAND)
+		sizer2a.Add(sizer2ab, 0, wx.EXPAND)
 		sizer2.Add(sizer2a, 0, wx.EXPAND)
 		panel2.SetSizer(sizer2)
 		vbox.Add(panel2, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 15)
@@ -152,6 +164,24 @@ class PalmImporterUI(wx.Frame):
 		self.importing = False
 		self.Connect(-1, -1, PalmImporterUI.THREAD_RESULT_ID, self.OnThreadResult)
 	
+	def InitLocale(self):
+		# Build list of locales, and figure out which one is current.  A little tricky since perhaps
+		# no locale is current, in which case we need to make the default effective, and the default
+		# is an alias for a longer name found in the table.
+		self.validLocales = list(set(locale.locale_alias.values()))
+		self.validLocales.sort()
+
+		if self.config.locale and self.config.locale != "":
+			defLocale = self.config.locale.lower()
+		else:
+			defLocale = locale.getdefaultlocale()[0].lower()
+		# Accept both aliases and real names -- if alias convert to real name, else just assume
+		# it's a real name and woe betide user who specifies something that's neither.
+		if locale.locale_alias.has_key(defLocale):
+			self.defaultLocale = locale.locale_alias[defLocale]
+		else:
+			self.defaultLocale = defLocale
+
 	def OnClickImport(self, event):
 		if not self.importing:
 			config = self.config
@@ -159,6 +189,7 @@ class PalmImporterUI(wx.Frame):
 			config.enPassphrase = self.password.GetValue()
 			config.pdExportFilename = self.filename.GetValue()
 			config.pdExportEncoding = self.encoding.GetValue()
+			config.locale = str(self.locale.GetStringSelection())
 			self.importButton.SetLabel("Stop importing")
 			self.worker = PalmImporterUI.ImporterThread(self, config)
 		else:
