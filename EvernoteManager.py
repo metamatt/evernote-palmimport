@@ -8,7 +8,6 @@
 # - basic functionality: 2009/06/26
 # - added tag functionality: 2009/06/27
 # - taught to force well-formed note titles: 2009/07/12
-# - also XML-escape note title: 2010/12/28
 
 
 import sys
@@ -146,7 +145,7 @@ class EvernoteManager:
 		# Need to convert body to well-formed XML:
 		# - escape entities, etc
 		# - change \n to <br/>
-		title = xml.sax.saxutils.escape(title)
+		# (Note that title remains a literal string, not XML.)
 		bodyXML = ""
 		for line in body.split('\n'):
 			bodyXML += xml.sax.saxutils.escape(line) + "<br/>"
