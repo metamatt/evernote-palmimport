@@ -81,11 +81,36 @@ class PalmDesktopMacNote:
 		return True
 
 	def ParsePalmDate(self, dateString):
-		# Parse a string date from the Palm format and return seconds since epoch
-		# Palm dates are in format "Month DD, YYYY", in English files.
-		# Or in format "DD month YYYY", in French files.  I'm sure other orders
+		# Parse a string date from the Palm format and return seconds since epoch.
+		#
+		# I have seen the following varieties from Mac export files (Windows export
+		# files contain no date at all):
+		# - Month DD, YYYY (English files, month name spelled out in English)
+		# - DD month YYYY (French files, month name spelled out in French)
+		# - m/d/yy (English speaker made export file, but no text; anyway this
+		#   matches the default nl_langinfo(locale.D_FMT) for the "C" locale)
+		# Note in the case where the month name is spelled out, not only the language
+		# for the month name changed, but also the separator format and the case of
+		# the month name.
+		#
+		# So, for now, we'll first try to parse as the C locale numeric format,
+		# try both "DD Month YYYY" and "Month DD YYYY" where the separator can be
+		# a comma or whitespace or both and the month name is spelled out as
+		# locale would do it, which catches the first 2 cases.  I'm sure other orders
 		# are possible in other locales, but for now, just assume the year comes
-		# last, the fields are separated by whitespace and/or commas, and
+		# last, the fields are separated by whitespace and/or commas, and try
+		# both possibilities for interpreting the first 2 fields.
+		#
+		# This gives us 3 cases which handle everything I've seen to date and
+		# don't overlap.
+		#
+		# Unclear whether we should also try time.strptime(dateString, "%x");
+		# that's somewhat ambiguous with the other pure-numeric form.
+		try:
+			return time.mktime(time.strptime(dateString, "%m/%d/%y"))
+		except:
+			pass
+
 		splitter = re.compile(r'[, ] *')
 		components = splitter.split(dateString)
 		if len(components) != 3:
@@ -313,8 +338,7 @@ class PalmDesktopNoteParser:
 				else:
 					self.notes = winNotes
 		except:
-			e = sys.exc_info()
-			traceback.print_exception(e[0], e[1], e[2])
+			traceback.print_exc(file=sys.stderr)
 			print "Exception thrown"
 
 		if len(self.notes):

@@ -245,7 +245,7 @@ class PalmImporterUI(wx.Frame):
 				self.sendProgress(False, result)
 			except:
 				e = sys.exc_info()
-				traceback.print_exception(e[0], e[1], e[2])
+				traceback.print_exc(file=sys.stderr)
 				self.sendProgress(False, "Unexpected error.")
 
 #
