@@ -17,6 +17,10 @@
 # - more robust date parsing, attempt to deal with dates in any locale: 2011/01/07
 # ------------------- to do! ----------------------
 # - attempt autodetect of character encoding?
+# ---------------- known issues -------------------
+# - date parsing is not fully general for arbitrary order of year/month/day: handles
+#   Month DD YYYY and DD Month YYYY, but year must be last
+# - date parsing requires month name and full year, but I've also seen e.g. 4/22/02.
 
 import re
 import sys
@@ -322,7 +326,7 @@ class PalmDesktopNoteParser:
 # Basic unit test harness
 if __name__ == "__main__":
 	parser = PalmDesktopNoteParser()
-	result = parser.Open(sys.argv[1])
+	result = parser.Open(sys.argv[1], "latin-1")
 	print "Opened " + str(len(parser.notes)) + " notes."
 	if result:
 		print result
