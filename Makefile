@@ -30,3 +30,6 @@ all-packages: source-package mac-package win-package
 
 upload:
 	rsync -essh --progress index.html dist/*.zip dist/*.tgz skynet:/web/maddogsw.com/web/evernote-utilities/evernote-palm-importer
+
+upload-beta:
+	rsync -essh --progress index.html dist/*.zip dist/*.tgz skynet:/web/maddogsw.com/web/evernote-utilities/evernote-palm-importer/new
