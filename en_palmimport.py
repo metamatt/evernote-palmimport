@@ -15,6 +15,7 @@
 # - specify character encoding for Palm export file: 2010/12/28
 # - refactored support for parsing command line options: 2011/01/04
 # - allow locale specified on command line: 2011/01/07
+# - deal with broken locale settings on Windows: 2011/01/13
 # ------------------- to do! ----------------------
 # - do something with Private flag?
 # - deal with other export formats?
@@ -110,8 +111,22 @@ class PalmNoteImporter:
 		#
 		# Open and parse Palm import file
 		#
-		sys.stdout.write("Using locale '%s' for date parsing\n" % config.locale)
-		locale.setlocale(locale.LC_TIME, config.locale)
+		
+		# First, set the user-specified locale.  XXX for some reason this fails on
+		# Python 2.6 for Windows, even using locale names that are totally valid as far
+		# as I can tell, and are in locale.locale_aliases.  So tolerate failure here.
+		# (On my Windows system, getdefaultlocale() returns en_US, which maps in the
+		# locale_alias table to en_US.ISO8859-1, but setlocale to either of those fail;
+		# setlocale to '' to use the real default returns 'English_United States.1252'!)
+		config.interimProgress("Using locale '%s' for date parsing" % config.locale)
+		try:
+			locale.setlocale(locale.LC_TIME, config.locale)
+		except locale.Error:
+			exc_value = sys.exc_info()[1]
+			config.interimProgress("Failed to set locale: %s" % exc_value)
+			newloc = locale.setlocale(locale.LC_TIME, "")
+			config.interimProgress("Using system default locale '%s' for date parsing" % newloc)
+			
 		parser = PalmDesktopNoteParser.PalmDesktopNoteParser()
 		error = parser.Open(config.pdExportFilename, config.pdExportEncoding)
 		if error:
