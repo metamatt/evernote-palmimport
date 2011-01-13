@@ -15,12 +15,14 @@
 # - specify character encoding for Palm export file: 2010/12/28
 # - Windows-format notes field is comma-separated list: 2011/01/06
 # - more robust date parsing, attempt to deal with dates in any locale: 2011/01/07
+# - added special mode to deal with CSV file where only first field is quoted: 2011/01/11
 # ------------------- to do! ----------------------
 # - attempt autodetect of character encoding?
+# - switch over to Python's general CSV parser, instead of the hacked up
+#   special purpose code here
 # ---------------- known issues -------------------
 # - date parsing is not fully general for arbitrary order of year/month/day: handles
 #   Month DD YYYY and DD Month YYYY, but year must be last
-# - date parsing requires month name and full year, but I've also seen e.g. 4/22/02.
 
 import re
 import sys
@@ -215,7 +217,13 @@ class PalmDesktopWinNote:
 
 class PalmDesktopWinNoteParser:
 	def ParseMany(self, data):
-		(strings, separator) = self.SplitQuotedStrings(data)
+		(strings, separator, suspicious) = self.SplitQuotedStrings(data, False)
+		print strings
+		if suspicious:
+			# saw extra text outside quotes; try again in crazy mode
+			(strings, separator, suspicious) = self.SplitQuotedStrings(data, True)
+			print "retry!"
+			print strings
 		notes = []
 
 		for i in range(0, len(strings), 3):
@@ -224,7 +232,7 @@ class PalmDesktopWinNoteParser:
 				notes.append(note)
 		return notes
 
-	def SplitQuotedStrings(self, data):
+	def SplitQuotedStrings(self, data, crazyMode = False):
 		# Finds strings enclosed in double quotes (a double double quote is treated as an escaped
 		# quote literal, not the end and beginning of an enclosed string), and returns the list.
 		# Also returns the first example of a separator character between the quote-delimited
@@ -233,14 +241,24 @@ class PalmDesktopWinNoteParser:
 		# Bug: doesn't care if the separators aren't all the same.  (In practice, I should see
 		# two commas and then a newline, or two tabs and then a newline, then repeat in clumps
 		# like that.)
+		#
+		# Crazy bonus mode: allow files that have "field 1",field2,field3\n, which I have seen,
+		# if the crazy flag is passed: by building up clumps of characters that appear outside
+		# quotes and between the real separator.
 		inQuote = False
 		lastCharWasQuote = False
 		strings = []
 		string = ""
+		crazyExtras = ""
 		separator = None
+		suspicious = False
 
 		for char in data:
 			if char == '"':
+				# When starting new quoted string, flush any stored craziness
+				if crazyMode and crazyExtras != "":
+					strings.append(crazyExtras)
+					crazyExtras = ""
 				# Found a quote; what to do depends on previous character
 				if lastCharWasQuote:
 					# Found repeated doublequote -- push single doublequote onto string to build
@@ -267,14 +285,25 @@ class PalmDesktopWinNoteParser:
 					# in middle of string -- push onto string to build
 					string += char
 				else:
-					# in boundary, this is the separator
-					if separator:
-						#if char != separator:
-						#	print "Warning, mixed separators: %c%c" % (char, separator)
+					# in boundary between quoted items: this should be the separator character
+					if separator: # if we have one we've seen before, expect to see same one again
+						if char == separator:
+							# found separator where we expected it
+							# flush any stored craziness
+							if crazyMode and crazyExtras != "":
+								strings.append(crazyExtras)
+								crazyExtras = ""
+						elif char != '\n':
+							# expected separator but got something else
+							print "Warning, mixed separators: %c%c" % (char, separator)
+							suspicious = True
+							if crazyMode:
+								crazyExtras += char
 						pass
 					else:
+						# first thing seen in separator position: latch it as separator
 						separator = char
-		return (strings, separator)
+		return (strings, separator, suspicious)
 
 
 class PalmDesktopNoteParser:
@@ -350,7 +379,11 @@ class PalmDesktopNoteParser:
 # Basic unit test harness
 if __name__ == "__main__":
 	parser = PalmDesktopNoteParser()
-	result = parser.Open(sys.argv[1], "latin-1")
+	if len(sys.argv) > 2:
+		encoding = sys.argv[2]
+	else:
+		encoding = "latin-1"
+	result = parser.Open(sys.argv[1], encoding)
 	print "Opened " + str(len(parser.notes)) + " notes."
 	if result:
 		print result
