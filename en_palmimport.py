@@ -153,13 +153,13 @@ class PalmNoteImporter:
 		n_total = len(parser.notes)
 		for palmNote in parser.notes:
 			try:
+				n_in = n_in + 1
 				title = palmNote.title
 				body = palmNote.body
 				date = palmNote.dateModified * 1000
 				tags = EN.LookupTags(palmNote.categories)
 				# TODO: do anything with private flag?
 
-				n_in = n_in + 1
 				createdNote = EN.CreateNotePlaintext(palmNotebook, title, body, date, tags)
 				n_out = n_out + 1
 				config.interimProgress("Created note %d/%d: %s" % (n_in, n_total, title))
