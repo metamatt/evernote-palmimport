@@ -178,6 +178,10 @@ class PalmDesktopWinNote:
 		#
 		# This code can read either the tab-separated or comma-separated variants; comma-separated is
 		# preferred because it can express embedded tabs, which the tab-separated variant cannot.
+		#
+		# Update 2011/01/14: it looks like the CSV format doesn't always quote strings; there's a
+		# dialect that only quotes strings containing newlines (or, probably, commas).  This often
+		# manifests as '"note\nbody\nhere",0,Unfiled', but can also be 'simple note,0,Unfiled'.
 		if len(strings) == 3 and separator == '\t':
 			body = strings[0].split('\r')
 		elif len(strings) == 3 and separator == ',':
@@ -220,8 +224,10 @@ class PalmDesktopWinNoteParser:
 		(strings, separator, suspicious) = self.SplitQuotedStrings(data, False)
 		if suspicious:
 			# saw extra text outside quotes; try again in crazy mode
+			# print strings
 			# print "Retrying parse in crazy mode"
 			(strings, separator, suspicious) = self.SplitQuotedStrings(data, True)
+			# print strings
 		notes = []
 
 		for i in range(0, len(strings), 3):
@@ -285,22 +291,26 @@ class PalmDesktopWinNoteParser:
 				else:
 					# in boundary between quoted items: this should be the separator character
 					if separator: # if we have one we've seen before, expect to see same one again
-						if char == separator:
+						if char == separator or char == '\n':
 							# found separator where we expected it
 							# flush any stored craziness
 							if crazyMode and crazyExtras != "":
 								strings.append(crazyExtras)
 								crazyExtras = ""
-						elif char != '\n':
+						else:
 							# expected separator but got something else
-							#print "Warning, mixed separators: %c%c" % (char, separator)
+							# print "Warning, mixed separators: %c%c" % (char, separator)
 							suspicious = True
 							if crazyMode:
 								crazyExtras += char
-						pass
 					else:
 						# first thing seen in separator position: latch it as separator
 						separator = char
+		# flush at EOF without CR:
+		if string:
+			strings.append(string)
+		if crazyMode and crazyExtras != "":
+			strings.append(crazyExtras)
 		return (strings, separator, suspicious)
 
 
