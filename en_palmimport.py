@@ -95,13 +95,12 @@ class PalmNoteImporter:
 		#
 		# Open and parse Palm import file
 		#
-		
-		# First, set the user-specified locale.  XXX for some reason this fails on
+		# First, set the user-specified locale.  (BUG: For some reason this fails on
 		# Python 2.6 for Windows, even using locale names that are totally valid as far
 		# as I can tell, and are in locale.locale_aliases.  So tolerate failure here.
 		# (On my Windows system, getdefaultlocale() returns en_US, which maps in the
 		# locale_alias table to en_US.ISO8859-1, but setlocale to either of those fail;
-		# setlocale to '' to use the real default returns 'English_United States.1252'!)
+		# setlocale to '' to use the real default returns 'English_United States.1252'!))
 		config.interimProgress("Using locale '%s' for date parsing" % config.locale)
 		try:
 			locale.setlocale(locale.LC_TIME, config.locale)
@@ -145,6 +144,7 @@ class PalmNoteImporter:
 		
 		#
 		# Create a new note in that notebook for each Palm note.
+		#
 		# Errors here should affect only that note, not kill the
 		# entire import process.
 		#
