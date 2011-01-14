@@ -218,12 +218,10 @@ class PalmDesktopWinNote:
 class PalmDesktopWinNoteParser:
 	def ParseMany(self, data):
 		(strings, separator, suspicious) = self.SplitQuotedStrings(data, False)
-		print strings
 		if suspicious:
 			# saw extra text outside quotes; try again in crazy mode
+			# print "Retrying parse in crazy mode"
 			(strings, separator, suspicious) = self.SplitQuotedStrings(data, True)
-			print "retry!"
-			print strings
 		notes = []
 
 		for i in range(0, len(strings), 3):
@@ -295,7 +293,7 @@ class PalmDesktopWinNoteParser:
 								crazyExtras = ""
 						elif char != '\n':
 							# expected separator but got something else
-							print "Warning, mixed separators: %c%c" % (char, separator)
+							#print "Warning, mixed separators: %c%c" % (char, separator)
 							suspicious = True
 							if crazyMode:
 								crazyExtras += char
