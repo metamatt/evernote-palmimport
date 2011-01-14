@@ -234,7 +234,9 @@ class PalmImporterUI(wx.Frame):
 			self.sendProgress(True, statusMsg)
 
 		def sendProgress(self, stillGoing, statusMsg):
-			wx.PostEvent(self.notifyWindow, PalmImporterUI.ResultEvent(stillGoing, statusMsg))
+			# incoming status messages are UTF-8, but UI might not be -- send as Python unicode
+			msg = statusMsg.decode("utf-8")
+			wx.PostEvent(self.notifyWindow, PalmImporterUI.ResultEvent(stillGoing, msg))
 
 		def stop(self):
 			self.config.cancelled = True
