@@ -93,22 +93,6 @@ class PalmNoteImporter:
 		# Can also call interim progress function with text updates.
 		
 		#
-		# Connect to Evernote service
-		#
-		config.interimProgress("Connecting to Evernote...")
-		EN = EvernoteManager.EvernoteManager()
-		if config.useLiveServer:
-			EN.UseLiveServer()
-		(result, err) = EN.Connect()
-		if not result:
-			return "Failed to connect to Evernote: " + err
-		(result, err) = EN.Authenticate(config.enUsername, config.enPassphrase)
-		if not result:
-			return "Failed to authenticate to Evernote: " + err
-		config.interimProgress("Connected to Evernote as " + config.enUsername)
-		notebooks = EN.GetNotebooks()
-		
-		#
 		# Open and parse Palm import file
 		#
 		
@@ -132,6 +116,22 @@ class PalmNoteImporter:
 		if error:
 			return error
 		config.interimProgress("Read " + str(len(parser.notes)) + " notes from export file")
+		
+		#
+		# Connect to Evernote service
+		#
+		config.interimProgress("Connecting to Evernote...")
+		EN = EvernoteManager.EvernoteManager()
+		if config.useLiveServer:
+			EN.UseLiveServer()
+		(result, err) = EN.Connect()
+		if not result:
+			return "Failed to connect to Evernote: " + err
+		(result, err) = EN.Authenticate(config.enUsername, config.enPassphrase)
+		if not result:
+			return "Failed to authenticate to Evernote: " + err
+		config.interimProgress("Connected to Evernote as " + config.enUsername)
+		notebooks = EN.GetNotebooks()
 		
 		#
 		# Create a notebook called "Palm import"
