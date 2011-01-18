@@ -165,15 +165,19 @@ class PalmImporterUI(wx.Frame):
 	
 	def InitLocale(self):
 		# Build list of locales, and figure out which one is current.  A little tricky since perhaps
-		# no locale is current, in which case we need to make the default effective, and the default
-		# is an alias for a longer name found in the table.
-		self.validLocales = list(set(locale.locale_alias.values()))
-		self.validLocales.sort()
+		# no locale is current, in which case we need to make the default effective, and there might
+		# be no available default.  And either the default or the specified one could be an alias for
+		# a longer name found in the aliases table.
+		self.validLocales = sorted(list(set(locale.locale_alias.values())))
 
 		if self.config.locale and self.config.locale != "":
-			defLocale = self.config.locale.lower()
+			defLocale = self.config.locale
 		else:
-			defLocale = locale.getdefaultlocale()[0].lower()
+			defLocale = locale.getdefaultlocale()[0]
+			if not defLocale:
+				defLocale = "C"
+		# locale.locale_alias uses lowercase keys
+		defLocale = defLocale.lower()
 		# Accept both aliases and real names -- if alias convert to real name, else just assume
 		# it's a real name and woe betide user who specifies something that's neither.
 		if locale.locale_alias.has_key(defLocale):

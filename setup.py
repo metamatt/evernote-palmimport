@@ -12,7 +12,7 @@ APP = ['EvernotePalmMemoImporter.py']
 # maybe it figures out Python library dependencies automatically?
 DATA_FILES = ['en_palmimport.py', 'EvernoteManager.py', 'PalmDesktopNoteParser.py', 'lib']
 PLIST = { 'CFBundleIdentifier' : 'com.maddogsw.evernote-palm-importer',
-          'CFBundleShortVersionString': '1.0.1' }
+          'CFBundleShortVersionString': '1.1.0' }
 OPTIONS = {'argv_emulation': True,
            'plist': PLIST }
 
