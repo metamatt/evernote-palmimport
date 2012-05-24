@@ -86,7 +86,7 @@ class PalmImporterUI(wx.Frame):
 		sizer1.Add(sizer1a, 0, wx.RIGHT, 10)
 		sizer1b = wx.StaticBoxSizer(wx.StaticBox(panel1, -1, 'About this program'))
 		vbox1 = wx.BoxSizer(wx.VERTICAL)
-		vbox1.Add(wx.StaticText(panel1, -1, "Note importer (c) 2011 Matt Ginzton, matt@maddogsw.com."))
+		vbox1.Add(wx.StaticText(panel1, -1, "Note importer (c) 2012 Matt Ginzton, matt@maddogsw.com."))
 		vbox1.Add(wx.StaticText(panel1, -1, "Palm and Evernote may be trademarks of their respective companies."))
 		vbox1Links = wx.BoxSizer(wx.HORIZONTAL)
 		#vbox1Links.Add(wx.StaticText(panel1, -1, "Like this? "))
