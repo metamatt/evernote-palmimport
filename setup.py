@@ -6,19 +6,17 @@ Usage:
 """
 
 from setuptools import setup
+import sys
+sys.path.append('./lib')
 
 APP = ['EvernotePalmMemoImporter.py']
-# is the following line even necessary? For a while I forgot PDNP.py and it still worked...
-# maybe it figures out Python library dependencies automatically?
-DATA_FILES = ['en_palmimport.py', 'EvernoteManager.py', 'PalmDesktopNoteParser.py', 'lib']
 PLIST = { 'CFBundleIdentifier' : 'com.maddogsw.evernote-palm-importer',
-          'CFBundleShortVersionString': '1.1.0' }
+          'CFBundleShortVersionString': '1.1.1' }
 OPTIONS = {'argv_emulation': True,
            'plist': PLIST }
 
 setup(
     app = APP,
-    data_files = DATA_FILES,
     options = {'py2app': OPTIONS},
     setup_requires = ['py2app'],
 )
