@@ -89,6 +89,7 @@ class PalmDesktopMacNote:
 		# files contain no date at all):
 		# - Month DD, YYYY (English files, month name spelled out in English)
 		# - DD month YYYY (French files, month name spelled out in French)
+		# - DD. month YYYY (German files, month name spelled out in German)
 		# - m/d/yy (English speaker made export file, but no text; anyway this
 		#   matches the default nl_langinfo(locale.D_FMT) for the "C" locale)
 		# Note in the case where the month name is spelled out, not only the language
@@ -119,12 +120,20 @@ class PalmDesktopMacNote:
 			return None
 		year = int(components[2])
 		month = day = None
-		if components[0] in self.monthLookup:
-			month = self.monthLookup[components[0]]
-			day = int(components[1])
-		elif components[1] in self.monthLookup:
-			month = self.monthLookup[components[1]]
-			day = int(components[0])
+		
+		try:
+			if components[0] in self.monthLookup:
+				month = self.monthLookup[components[0]]
+				if components[1][-1] == '.':
+					components[1] = components[1][:-1]
+				day = int(components[1])
+			elif components[1] in self.monthLookup:
+				month = self.monthLookup[components[1]]
+				if components[0][-1] == '.':
+					components[0] = components[0][:-1]
+				day = int(components[0])
+		except:
+			pass
 		if year and month and day:
 			return time.mktime([year, month, day, 12, 0, 0, 0, 0, -1])
 		else:
@@ -386,12 +395,18 @@ class PalmDesktopNoteParser:
 
 # Basic unit test harness
 if __name__ == "__main__":
+	from optparse import OptionParser
+	optparser = OptionParser()
+	optparser.add_option('-l', '--locale');
+	optparser.add_option('-e', '--encoding', default = 'latin-1');
+	(options, args) = optparser.parse_args()
+
+	if options.locale:
+		import locale;
+		locale.setlocale(locale.LC_ALL, options.locale)
+
 	parser = PalmDesktopNoteParser()
-	if len(sys.argv) > 2:
-		encoding = sys.argv[2]
-	else:
-		encoding = "latin-1"
-	result = parser.Open(sys.argv[1], encoding)
+	result = parser.Open(args[0], options.encoding)
 	print "Opened " + str(len(parser.notes)) + " notes."
 	if result:
 		print result
