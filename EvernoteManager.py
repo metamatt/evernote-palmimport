@@ -33,7 +33,7 @@ class EvernoteManager:
 		# Initialize the Evernote manager object, by default talking to their
 		# test/staging server.  Call UseLiveServer before Connect if you want
 		# the real server.
-		self._edamHost = "stage.evernote.com"
+		self._edamHost = "sandbox.evernote.com"
 		self._consumerKey = "mginzton"
 		# This decodes to my consumer API key from Evernote's developer support team.
 		# If you're clever enough to find this, good for you.  Please get your own

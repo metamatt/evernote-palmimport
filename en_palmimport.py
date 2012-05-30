@@ -63,7 +63,7 @@ class PalmNoteImporter:
 			parser.add_option("-e", "--encoding", dest="encoding",
 			                  help="Character encoding for export file (see http://docs.python.org/library/codecs.html#standard-encodings for valid values)")
 			parser.add_option("-t", "--test", dest="testServer", action="store_true",
-					  help="Connect to Evernote staging server")
+					  help="Connect to Evernote sandbox server")
 			parser.add_option("-l", "--locale", dest="locale",
 					  help="Set locale used for interpreting dates in Mac-format export files")
 
