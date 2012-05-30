@@ -16,6 +16,8 @@
 # - Windows-format notes field is comma-separated list: 2011/01/06
 # - more robust date parsing, attempt to deal with dates in any locale: 2011/01/07
 # - added special mode to deal with CSV file where only first field is quoted: 2011/01/11
+# - more robust date parsing, tested on German-locale dates: 2012/05/24
+# - Mac-format encoding changes for paragraph separator: 2012/05/30
 # ------------------- to do! ----------------------
 # - attempt autodetect of character encoding?
 # - switch over to Python's general CSV parser, instead of the hacked up
@@ -45,9 +47,12 @@ class PalmDesktopMacNote:
 		# (My notes don't have values in the "time" or "date" fields, but do have a date in "modified".)
 		#
 		# Format is: tab separated values
-		# Multiline freeform text has newlines replaced by ascii 0xA6; Mac shows this as pipelike character.
-		# (Note that after decode from latin-1, the 0xA6 byte has become U+C2, and after re-encode to UTF-8
-		# it's two bytes, \xC2\xA6.)
+		# Multiline freeform text has newlines replaced by byte 0xA6; that's often shown as a pipe character
+		# because that's what it means in latin-1 and utf-8. But in MacRoman or "macintosh" character set,
+		# it's the paragraph character, which is 0xB6 in latin-1 and utf-8. I believe that the 0xA6 byte was
+		# always meant as the paragraph chararacter, and Mac-format export files are usually (always?)
+		# encoded in MacRoman. (Note that after decode from MacRoman, the 0xB6 byte has become U+B6, and
+		# after re-encode to UTF-8 it's two bytes, \xC2\xB6, so that's what we look for here.)
 		
 		encodedEntries = line.split('\t')
 		if len(encodedEntries) != 8:
@@ -55,7 +60,7 @@ class PalmDesktopMacNote:
 
 		entries = []
 		for entry in encodedEntries:
-			entry = entry.replace('\xC2\xA6', '\n')
+			entry = entry.replace('\xC2\xB6', '\n')
 			entries.append(entry)
 		#print "Note with " + str(len(encodedEntries)) + " fields"
 
@@ -362,7 +367,7 @@ class PalmDesktopNoteParser:
 			print "Reading export file '%s' with encoding '%s'" % (filename, encoding)
 			data = self.file.read()
 			# Need to know data encoding so we can transform to utf-8
-			# Note on good guesses: latin-1 and windows-1252 will be common
+			# Note on good guesses: Mac would often use MacRoman; Windows would often use windows-1252; latin-1 may also be common
 			data = data.decode(encoding)
 			data = data.encode('utf-8')
 			data = self.RemoveControlChars(data)
@@ -398,7 +403,8 @@ if __name__ == "__main__":
 	from optparse import OptionParser
 	optparser = OptionParser()
 	optparser.add_option('-l', '--locale');
-	optparser.add_option('-e', '--encoding', default = 'latin-1');
+	defaultLocale = 'MacRoman' if sys.platform == 'darwin' else 'latin-1'
+	optparser.add_option('-e', '--encoding', default = defaultLocale);
 	(options, args) = optparser.parse_args()
 
 	if options.locale:

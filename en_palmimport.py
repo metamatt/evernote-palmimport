@@ -16,6 +16,7 @@
 # - refactored support for parsing command line options: 2011/01/04
 # - allow locale specified on command line: 2011/01/07
 # - deal with broken locale settings on Windows: 2011/01/13
+# - default character encoding for Mac OS X is MacRoman: 2012/05/30
 # ------------------- to do! ----------------------
 # - do something with Private flag?
 # - deal with other export formats?
@@ -50,6 +51,8 @@ class PalmNoteImporter:
 
 			if sys.platform == "win32":
 				self.pdExportEncoding = "windows-1252"
+			elif sys.platform == "darwin":
+				self.pdExportEncoding = "MacRoman"
 			else:
 				self.pdExportEncoding = "latin-1"
 
