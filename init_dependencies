@@ -1,0 +1,6 @@
+#!/bin/sh
+#
+# Assumes you have a working pip, and ideally a working and active virtualenv.
+
+pip install wx
+git clone https://github.com/evernote/evernote-sdk-python.git
