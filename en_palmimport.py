@@ -25,6 +25,7 @@
 #
 # Python modules we use
 #
+import json
 import locale
 import os
 import sys
@@ -48,6 +49,7 @@ class PalmNoteImporter:
 			self.interimProgress = None
 			self.cancelled = False
 			self.useLiveServer = True
+			self.cacheLogin = False
 
 			if sys.platform == "win32":
 				self.pdExportEncoding = "windows-1252"
@@ -59,10 +61,7 @@ class PalmNoteImporter:
 		def ParseOptions(self):
 			# look on command line, then environment, to determine parameters
 			parser = OptionParser()
-			parser.add_option("-u", "--username", dest="username",
-					  help="Evernote username")
-			parser.add_option("-p", "--password", dest="password",
-					  help="Evernote password")
+			parser.add_option("-c", "--cachelogin", action="store_true", help="Cache OAuth login token for reuse")
 			parser.add_option("-e", "--encoding", dest="encoding",
 			                  help="Character encoding for export file (see http://docs.python.org/library/codecs.html#standard-encodings for valid values)")
 			parser.add_option("-t", "--test", dest="testServer", action="store_true",
@@ -72,23 +71,41 @@ class PalmNoteImporter:
 
 			(options, args) = parser.parse_args()
 
-			self.enUsername = (options.username or os.getenv("en_username") or "")
-			self.enPassphrase = (options.password or os.getenv("en_password") or "")
 			self.pdExportFilename = ((len(args) and args[0]) or os.getenv("en_palmfile") or "")
 			self.locale = (options.locale or self.locale)
 			# Note on valid encodings: see http://docs.python.org/library/codecs.html#standard-encodings
 			self.pdExportEncoding = (options.encoding or self.pdExportEncoding)
 			if options.testServer:
 				self.useLiveServer = False
+			if options.cachelogin:
+				self.cacheLogin = True
 
 		def FinalizeNonGuiOptions(self):
 			# fill in required missing parameters from raw-input
-			if not len(self.enUsername):
-				self.enUsername = raw_input("Evernote username: ")
-			if not len(self.enPassphrase):
-				self.enPassphrase = raw_input("Evernote password: ")
 			if not len(self.pdExportFilename):
 				self.pdExportFilename = raw_input("Palm Desktop memo export file: ")
+
+	def load_cached_authtoken(self):
+		# Right now the persistent settings file is used only for the oauth token, so
+		# we have all the read/write code here and save_cached_authtoken instead of
+		# generalizing it further, but we use json and a named parameter instead of just
+		# dumping the token string there naked, to future proof ourselves if we later
+		# add more persistent state.
+		try:
+			filename = os.path.expanduser('~/.evernote_palm_importer')
+			f = open(filename)
+			settings = json.load(f)
+			f.close()
+			return settings['oauth_token']
+		except:
+			return None
+
+	def save_cached_authtoken(self, token):
+		filename = os.path.expanduser('~/.evernote_palm_importer')
+		f = open(filename, 'w')
+		settings = { 'oauth_token' : token }
+		json.dump(settings, f)
+		f.close()
 
 	def ImportNotes(self, config):
 		# Do all the work.
@@ -102,7 +119,7 @@ class PalmNoteImporter:
 		# Python 2.6 for Windows, even using locale names that are totally valid as far
 		# as I can tell, and are in locale.locale_aliases.  So tolerate failure here.
 		# (On my Windows system, getdefaultlocale() returns en_US, which maps in the
-		# locale_alias table to en_US.ISO8859-1, but setlocale to either of those fail;
+		# locale_alias table to en_US.ISO8859-1, but setlocale to either of those fails;
 		# setlocale to '' to use the real default returns 'English_United States.1252'!))
 		config.interimProgress("Using locale '%s' for date parsing" % config.locale)
 		try:
@@ -123,16 +140,22 @@ class PalmNoteImporter:
 		# Connect to Evernote service
 		#
 		config.interimProgress("Connecting to Evernote...")
-		EN = EvernoteManager.EvernoteManager()
-		if config.useLiveServer:
-			EN.UseLiveServer()
+		EN = EvernoteManager.EvernoteManager(config.useLiveServer)
 		(result, err) = EN.Connect()
 		if not result:
 			return "Failed to connect to Evernote: " + err
-		(result, err) = EN.Authenticate(config.enUsername, config.enPassphrase)
-		if not result:
+		# load and apply any cached login token
+		cached_token = self.load_cached_authtoken()
+		if cached_token:
+			(result, err) = EN.AuthenticateWithCachedToken(cached_token)
+		if not EN.is_authenticated():
+			(result, err) = EN.AuthenticateInteractively()
+		if EN.is_authenticated():
+			if config.cacheLogin and not cached_token:
+				self.save_cached_authtoken(EN.authToken)
+		else:
 			return "Failed to authenticate to Evernote: " + err
-		config.interimProgress("Connected to Evernote as " + config.enUsername)
+		config.interimProgress("Connected to Evernote service as %s" % EN.get_user_name())
 		notebooks = EN.GetNotebooks()
 		
 		#
