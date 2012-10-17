@@ -17,6 +17,7 @@
 # - allow locale specified on command line: 2011/01/07
 # - deal with broken locale settings on Windows: 2011/01/13
 # - default character encoding for Mac OS X is MacRoman: 2012/05/30
+# - add OAuth and remove username-password authentication: 2012/10/16
 # ------------------- to do! ----------------------
 # - do something with Private flag?
 # - deal with other export formats?
@@ -25,13 +26,17 @@
 #
 # Python modules we use
 #
-import json
+try:
+	import json
+except ImportError:
+	import simplejson as json
 import locale
+import optparse
 import os
 import sys
 import time
 import traceback
-from optparse import OptionParser
+
 import EvernoteManager
 import PalmDesktopNoteParser
 
@@ -60,7 +65,7 @@ class PalmNoteImporter:
 
 		def ParseOptions(self):
 			# look on command line, then environment, to determine parameters
-			parser = OptionParser()
+			parser = optparse.OptionParser()
 			parser.add_option("-c", "--cachelogin", action="store_true", help="Cache OAuth login token for reuse")
 			parser.add_option("-e", "--encoding", dest="encoding",
 			                  help="Character encoding for export file (see http://docs.python.org/library/codecs.html#standard-encodings for valid values)")

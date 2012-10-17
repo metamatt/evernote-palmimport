@@ -1,6 +1,6 @@
 #!/usr/bin/make
 
-PYTHON = python2.5 # force use of 32-bit version on Snow Leopard
+PYTHON = python2.5 # easiest way to force use of 32-bit python on Mac OS X 10.6 and later (since wxpython is distributed only as 32-bit)
 
 default: macos-app-selfcontained
 

@@ -147,7 +147,7 @@ class EvernoteManager:
 			try:
 				user = self.userStore.getUser(self.authToken)
 				return True
-			except Errors.EDAMUserException as ex:
+			except Errors.EDAMUserException, ex:
 				print 'Authentication error: %d' % ex.errorCode
 		return False
 

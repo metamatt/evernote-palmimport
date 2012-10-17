@@ -1,6 +1,40 @@
 #!/bin/sh
 #
-# Assumes you have a working pip, and ideally a working and active virtualenv.
+# OK, I would love to use pip and virtualenv, but wx can't be installed by
+# pip and/or easy_install, plus, until the 2.9 in-development series it's
+# Carbon-based and thus 32-bit only, and the easiest way to make sure we
+# invoke a Python environment that can actually load those 32-bit libraries
+# is to invoke Python as python2.5, which, er, restricts us to python 2.5
+# and means we need to install simplejson.
+#
+# (Yeah, there are ways involving magic environment variables or 'defaults write'
+# or 'arch -i386' to invoke newer Pythons in 32-bit mode, but I can't find an
+# easy form of these that survives through the various ways we invoke Python
+# as part of easy_install/pip/virtualenv/setup.py/py2app, and the python2.5
+# trick does work for that whole chain.)
+#
+# (Also note wxpython 2.9 is distributed only for Python 2.7 which isn't
+# bundled with any Mac OS X version until 10.7.)
+#
+# My goal here is to build this for distribution with py2app, meaning build it
+# once, package it once, and have it run on as many Mac OS X machines as
+# possible. If I build with python2.5 and wxpython 2.8, as much trouble as
+# this is, it runs on Mac OS X versions from 10.5 to 10.8.
+#
+# It might be possible for me to download a standard Python 2.7 distribution
+# and wxpython 2.9 targeting Python 2.7 and Cocoa, and get py2app to package
+# all this. But I'm tried of mucking with py2app and friends; what's here
+# is lame and fragile but has the virtue that it already works.
+#
+# If you're planning on running from source and are running on a reasonably
+# modern machine and/or can provide your own dependencies, using Python 2.7 and
+# wxpython 2.9 is probably the easiest way to go, and you can skip all this.
+# You still don't get to use virtualenv, since wxpython still needs to be
+# installed globally and AFAIK the virtualenv python can't find the globally
+# installed wx libraries (well, you can hack around that by messing with
+# sys.path, which is another thing that works fine locally but is hard to
+# reconcile with py2app).
 
-pip install wx
+sudo easy_install-2.5 simplejson
+echo "go install wxpython 2.8 for python 2.5 yourself..."
 git clone https://github.com/evernote/evernote-sdk-python.git

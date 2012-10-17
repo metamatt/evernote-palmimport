@@ -73,12 +73,12 @@ class PalmImporterUI(wx.Frame):
 		grid1 = wx.GridSizer(2, 2, 5, 5)
 		self.controls.append(wx.StaticText(panel1, -1, "Username"))
 		grid1.Add(self.controls[-1])
-		self.controls.append(wx.TextCtrl(panel1, self.ID_USERNAME, config.enUsername))
+		self.controls.append(wx.TextCtrl(panel1, self.ID_USERNAME, 'XXX'))
 		self.username = self.controls[-1]
 		grid1.Add(self.controls[-1])
 		self.controls.append(wx.StaticText(panel1, -1, "Password"))
 		grid1.Add(self.controls[-1])
-		self.controls.append(wx.TextCtrl(panel1, self.ID_PASSWORD, config.enPassphrase,
+		self.controls.append(wx.TextCtrl(panel1, self.ID_PASSWORD, 'XXX',
 						 style = wx.TE_PASSWORD))
 		self.password = self.controls[-1]
 		grid1.Add(self.controls[-1])
