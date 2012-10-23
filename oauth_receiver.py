@@ -9,10 +9,16 @@
 
 
 import BaseHTTPServer
+import cgi
 import threading
 import time
 import urllib
 import urlparse
+
+try:
+	parse_qs = urlparse.parse_qs
+except AttributeError:
+	parse_qs = cgi.parse_qs
 
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
@@ -20,7 +26,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		request = urlparse.urlparse(self.path)
 		(response, body) = (404, None)
 		if request.path == '/oauth_receiver':
-			query = urlparse.parse_qs(request.query)
+			query = parse_qs(request.query)
 			try:
 				self.oauth_token = query['oauth_token'][0]
 				self.oauth_verifier = query['oauth_verifier'][0]
