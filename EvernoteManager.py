@@ -11,8 +11,6 @@
 # - converted to OAuth: 2012/10/15
 
 import sys
-import traceback
-import webbrowser
 #
 # Force Python to notice local-embedded Evernote API libs
 #
@@ -20,6 +18,12 @@ sys.path.append('./evernote-sdk-python/lib')
 #
 # Python modules we use
 #
+import traceback
+import urllib
+import urllib2
+import xml.sax.saxutils
+import webbrowser
+
 import thrift.transport.THttpClient as THttpClient
 import thrift.protocol.TBinaryProtocol as TBinaryProtocol
 import evernote.edam.userstore.UserStore as UserStore
@@ -28,13 +32,8 @@ import evernote.edam.notestore.NoteStore as NoteStore
 import evernote.edam.error.ttypes as Errors
 import evernote.edam.limits.constants as Limits
 import evernote.edam.type.ttypes as Types
-import urllib
-import urllib2
-import urlparse
-import xml.sax.saxutils
 
-from oauth_receiver import OAuthReceiver
-
+from oauth_receiver import OAuthReceiver, parse_qs
 
 client_name = "com.maddogsw.en_palmimport/1.2; Python"
 # This decodes to my consumer API key from Evernote's developer support team.
@@ -75,7 +74,7 @@ class OAuthHelper:
 			'oauth_callback': self.local_server.url # The browser will redirect here upon authorization.
 		}
 		response = urllib2.urlopen(self.oauth_url, data = urllib.urlencode(params))
-		result = urlparse.parse_qs(response.read())
+		result = parse_qs(response.read())
 		self.temp_credential = result['oauth_token'][0]
 
 	def _authorize_temp_credential(self):
@@ -104,7 +103,7 @@ class OAuthHelper:
 		}
 		response = urllib.urlopen(self.oauth_url, data = urllib.urlencode(params))
 		# need to url-decode and keep the oauth_token and edam_noteStoreUrl values
-		result = urlparse.parse_qs(response.read())
+		result = parse_qs(response.read())
 		return (result['oauth_token'][0], result['edam_noteStoreUrl'][0])
 
 
@@ -138,11 +137,13 @@ class EvernoteManager:
 		except:
 			traceback.print_exc(file=sys.stderr)
 			return [False, str(sys.exc_info()[1])]
-			
-		print "Is my EDAM protocol version up to date? ", str(versionOK)
-		return [versionOK, "API version error"]
-		
+
+		if not versionOK:
+			return [False, "API version error"]
+		return [True, userStoreUri]
+
 	def is_authenticated(self):
+		# Result: True/False
 		if self.authToken:
 			try:
 				user = self.userStore.getUser(self.authToken)
@@ -152,25 +153,32 @@ class EvernoteManager:
 		return False
 
 	def AuthenticateWithCachedToken(self, cached_token):
+		# Result: tuple with success/fail as true/false, followed by error message if any
 		self.authToken = cached_token
 		self.noteStoreUrl = self.userStore.getNoteStoreUrl(self.authToken)
 		if self.is_authenticated():
 			return [True, '']
 		else:
 			return [False, 'authentication failure']
-	
+
 	def AuthenticateInteractively(self):
+		# Result: tuple with success/fail as true/false, followed by error message if any
 		auth_helper = OAuthHelper(self._evernoteBaseHost)
 		(self.authToken, self.noteStoreUrl) = auth_helper.flow() # XXX GUI version should make this async and allow cancel
 		if self.is_authenticated():
 			return [True, '']
 		else:
 			return [False, 'authentication failure']
-		
+
+	def DiscardAuthentication(self):
+		self.authToken = None
+		self.noteStoreUrl = None
+		self.noteStore = None
+
 	def get_user_name(self):
 		user = self.userStore.getUser(self.authToken)
 		return user.username
-	
+
 	def GetNoteStore(self):
 		# Returns note store
 		# Side effects: if note store not cached, opens it and caches result
@@ -178,7 +186,7 @@ class EvernoteManager:
 		if not self.noteStore:
 			self._OpenNoteStore()
 		return self.noteStore
-		
+
 	def _OpenNoteStore(self):
 		# Opens the note store (assumes not open)
 		# Side effects: caches result
