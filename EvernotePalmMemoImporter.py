@@ -16,6 +16,7 @@
 # - added support for parsing command line options: 2011/01/04
 # - added gui for character encoding: 2011/01/04
 # - added gui for locale used for date parsing: 2011/01/07
+# - add OAuth and remove username-password authentication: 2012/10/xx
 # ------------------- to do! ----------------------
 # - make prettier UI?
 
@@ -48,64 +49,40 @@ class PalmImporterUI(wx.Frame):
 
 	THREAD_RESULT_ID = wx.NewId()
 
-	def __init__(self, parent, id, config):
+	def __init__(self, parent, id, config, details):
 		self.config = config
-		self.InitLocale()
+		config.interimProgress = self.Report
+		self.InitLocale(details)
 		wx.Frame.__init__(self, parent, id, "Evernote Palm importer")
 
 		# IDs used for controls we'll interact with more than once
-		self.ID_USERNAME = wx.NewId()
-		self.ID_PASSWORD = wx.NewId()
 		self.ID_FILEBROWSE = wx.NewId()
-		self.ID_IMPORT = wx.NewId()
-		self.ID_STATUS = wx.NewId()
 		self.ID_ENCODING = wx.NewId()
 		self.ID_LOCALE = wx.NewId()
+		self.ID_STATUS = wx.NewId()
+		self.ID_IMPORT = wx.NewId()
 
 		# create and lay out GUI controls
-		self.controls = []
 		vbox = wx.BoxSizer(wx.VERTICAL)
 		panel = wx.Panel(self, -1)
 
+		# "About" panel
 		panel1 = wx.Panel(panel, -1)
-		sizer1 = wx.BoxSizer(wx.HORIZONTAL)
-		sizer1a = wx.StaticBoxSizer(wx.StaticBox(panel1, -1, 'Evernote credentials'))
-		grid1 = wx.GridSizer(2, 2, 5, 5)
-		self.controls.append(wx.StaticText(panel1, -1, "Username"))
-		grid1.Add(self.controls[-1])
-		self.controls.append(wx.TextCtrl(panel1, self.ID_USERNAME, 'XXX'))
-		self.username = self.controls[-1]
-		grid1.Add(self.controls[-1])
-		self.controls.append(wx.StaticText(panel1, -1, "Password"))
-		grid1.Add(self.controls[-1])
-		self.controls.append(wx.TextCtrl(panel1, self.ID_PASSWORD, 'XXX',
-						 style = wx.TE_PASSWORD))
-		self.password = self.controls[-1]
-		grid1.Add(self.controls[-1])
-		sizer1a.Add(grid1)
-		sizer1.Add(sizer1a, 0, wx.RIGHT, 10)
-		sizer1b = wx.StaticBoxSizer(wx.StaticBox(panel1, -1, 'About this program'))
+		sizer1b = wx.StaticBoxSizer(wx.StaticBox(panel1, -1, 'About this program'), wx.VERTICAL)
 		vbox1 = wx.BoxSizer(wx.VERTICAL)
 		vbox1.Add(wx.StaticText(panel1, -1, "Note importer (c) 2012 Matt Ginzton, matt@maddogsw.com."))
 		vbox1.Add(wx.StaticText(panel1, -1, "Palm and Evernote may be trademarks of their respective companies."))
 		vbox1Links = wx.BoxSizer(wx.HORIZONTAL)
-		#vbox1Links.Add(wx.StaticText(panel1, -1, "Like this? "))
-		#self.feedbackLink = wx.HyperlinkCtrl(panel1, -1, "Let me know", "mailto:matt@maddogsw.com?subject=Palm/Evernote%20importer")
-		#vbox1Links.Add(self.feedbackLink)
-		#vbox1Links.Add(wx.StaticText(panel1, -1, ". Like it a lot? "))
-		#self.donateLink = wx.HyperlinkCtrl(panel1, -1, "Donate", "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=6435444")
-		#vbox1Links.Add(self.donateLink)
-		#vbox1Links.Add(wx.StaticText(panel1, -1, "."))
 		vbox1Links.Add(wx.StaticText(panel1, -1, "Read the "))
 		self.usageLink = wx.HyperlinkCtrl(panel1, -1, "usage instructions", "http://www.maddogsw.com/evernote-utilities/evernote-palm-importer/")
 		vbox1Links.Add(self.usageLink)
 		vbox1Links.Add(wx.StaticText(panel1, -1, " to learn how to export your notes from Palm Desktop."))
 		vbox1.Add(vbox1Links)
-		sizer1b.Add(vbox1)
-		sizer1.Add(sizer1b)
-		panel1.SetSizer(sizer1)
+		sizer1b.Add(vbox1, 0, wx.EXPAND)
+		panel1.SetSizer(sizer1b)
 		vbox.Add(panel1, 0, wx.LEFT | wx.RIGHT | wx.TOP | wx.BOTTOM, 15)
 
+		# Notes-data panel
 		panel2 = wx.Panel(panel, -1)
 		sizer2 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Palm Desktop note export location'), wx.VERTICAL)
 		sizer2a = wx.BoxSizer(wx.VERTICAL)
@@ -115,7 +92,7 @@ class PalmImporterUI(wx.Frame):
 		sizer2a.Add(self.filename, 0, wx.EXPAND)
 		sizer2aa = wx.BoxSizer(wx.HORIZONTAL)
 		sizer2aa.Add(wx.StaticText(panel2, -1, "Character encoding"))
-		self.encoding = wx.TextCtrl(panel2, self.ID_ENCODING, config.pdExportEncoding)
+		self.encoding = wx.TextCtrl(panel2, self.ID_ENCODING, details.encoding)
 		sizer2aa.Add(self.encoding, 1, wx.EXPAND)
 		self.encodingLink = wx.HyperlinkCtrl(panel2, -1, "list of valid encodings", "http://docs.python.org/library/codecs.html#standard-encodings")
 		sizer2aa.Add(self.encodingLink)
@@ -130,19 +107,20 @@ class PalmImporterUI(wx.Frame):
 		panel2.SetSizer(sizer2)
 		vbox.Add(panel2, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 15)
 
+		# Big-do-it-button panel
 		panel3 = wx.Panel(panel, -1)		
 		sizer3 = wx.BoxSizer(wx.HORIZONTAL)
-		self.controls.append(wx.Button(panel3, self.ID_IMPORT, "Import notes"))
-		self.importButton = self.controls[-1]
-		sizer3.Add(self.controls[-1], 1, wx.BOTTOM | wx.EXPAND, 5)
+		self.importButton = wx.Button(panel3, self.ID_IMPORT, "Import notes")
+		sizer3.Add(self.importButton, 1, wx.BOTTOM | wx.EXPAND, 5)
 		panel3.SetSizer(sizer3)
 		vbox.Add(panel3, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 15)
 
+		# Operation status panel
 		panel4 = wx.Panel(panel, -1)
 		sizer4 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Status'))
 		self.statusLabel = wx.ListBox(panel4, self.ID_STATUS)
 		sizer4.Add(self.statusLabel, 1, wx.ALL | wx.EXPAND, 5)
-		self.Report("Enter Evernote credentials, specify Palm Desktop export file, and press Import.")
+		self.Report("Instructions: Load a Palm Desktop export file and press Import.")
 		panel4.SetSizer(sizer4)
 		vbox.Add(panel4, 1, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 15)
 
@@ -151,27 +129,28 @@ class PalmImporterUI(wx.Frame):
 		self.Center()
 		self.Show(True)
 
-		wx.EVT_TEXT(self, self.ID_USERNAME, self.OnTextFieldChange)
-		wx.EVT_TEXT(self, self.ID_PASSWORD, self.OnTextFieldChange)
 		wx.EVT_BUTTON(self, self.ID_IMPORT, self.OnClickImport)
 		self.importButton.SetDefault()
 		self.importButton.Enable(False)
 
-		self.filename.SetValue(config.pdExportFilename)
+		if details.filename:
+			self.filename.SetValue(details.filename)
+
+		self.importer = PalmNoteImporter(config)
 
 		self.worker = None
 		self.importing = False
 		self.Connect(-1, -1, PalmImporterUI.THREAD_RESULT_ID, self.OnThreadResult)
 	
-	def InitLocale(self):
+	def InitLocale(self, details):
 		# Build list of locales, and figure out which one is current.  A little tricky since perhaps
 		# no locale is current, in which case we need to make the default effective, and there might
 		# be no available default.  And either the default or the specified one could be an alias for
 		# a longer name found in the aliases table.
 		self.validLocales = sorted(list(set(locale.locale_alias.values())))
 
-		if self.config.locale and self.config.locale != "":
-			defLocale = self.config.locale
+		if details.locale and details.locale != "":
+			defLocale = details.locale
 		else:
 			defLocale = locale.getdefaultlocale()[0]
 			if not defLocale:
@@ -190,22 +169,18 @@ class PalmImporterUI(wx.Frame):
 
 	def OnClickImport(self, event):
 		if not self.importing:
-			config = self.config
-			config.enUsername = self.username.GetValue()
-			config.enPassphrase = self.password.GetValue()
-			config.pdExportFilename = self.filename.GetValue()
-			config.pdExportEncoding = self.encoding.GetValue()
-			config.locale = str(self.locale.GetStringSelection())
+			details = PalmNoteImporter.ExportFileDetails(self.filename.GetValue(), str(self.locale.GetStringSelection()), self.encoding.GetValue())
 			self.Report("Import process beginning.")
 			self.importButton.SetLabel("Stop importing")
-			self.worker = PalmImporterUI.ImporterThread(self, config)
+			self.worker = PalmImporterUI.ImporterThread(self, self.importer, details)
 		else:
 			self.Report("Cancelling import process.")
 			self.importButton.SetLabel("Cancelling...")
 			self.worker.stop()
 			
 	def OnTextFieldChange(self, event):
-		if len(self.username.GetValue()) and len(self.password.GetValue()) and len(self.filename.GetValue()):
+		# XXX should reload notes on change to any of the notes-details params, and key this on "are any notes loaded"
+		if len(self.filename.GetValue()):
 			self.importButton.Enable(True)
 		else:
 			self.importButton.Enable(False)
@@ -225,13 +200,13 @@ class PalmImporterUI(wx.Frame):
 			self.data = [stillGoing, statusMsg]
 	
 	class ImporterThread(Thread):
-		def __init__(self, notifyWindow, config):
+		def __init__(self, notifyWindow, importer, export_file_details):
 			Thread.__init__(self)
 			self.notifyWindow = notifyWindow
-			self.importer = PalmNoteImporter()
-			self.config = config
-			self.config.cancelled = False
-			self.config.interimProgress = self.interimProgress
+			self.importer = importer
+			self.export_file_details = export_file_details
+			self.importer.config.cancelled = False
+			self.importer.config.interimProgress = self.interimProgress
 			self.start()
 		
 		def interimProgress(self, statusMsg):
@@ -243,11 +218,11 @@ class PalmImporterUI(wx.Frame):
 			wx.PostEvent(self.notifyWindow, PalmImporterUI.ResultEvent(stillGoing, msg))
 
 		def stop(self):
-			self.config.cancelled = True
+			self.importer.config.cancelled = True
 			
 		def run(self):
 			try:
-				result = self.importer.ImportNotes(self.config)
+				result = self.importer.ImportNotes(self.export_file_details)
 				self.sendProgress(False, result)
 			except:
 				e = sys.exc_info()
@@ -260,9 +235,9 @@ class PalmImporterUI(wx.Frame):
 if __name__ == "__main__":
 	app = wx.PySimpleApp()
 
-	config = PalmNoteImporter().Config()
-	config.ParseOptions()
+	config = PalmNoteImporter.Config()
+	details = config.ParseOptions()
 
-	frame = PalmImporterUI(None, wx.ID_ANY, config)
+	frame = PalmImporterUI(None, wx.ID_ANY, config, details)
 
 	app.MainLoop()

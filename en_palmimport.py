@@ -45,23 +45,25 @@ import PalmDesktopNoteParser
 # Import logic, and struct to configure it, lives in this class.
 #
 class PalmNoteImporter:
+	class ExportFileDetails:
+		def __init__(self, filename, locale, encoding):
+			if sys.platform == "win32":
+				default_encoding = "windows-1252"
+			elif sys.platform == "darwin":
+				default_encoding = "MacRoman"
+			else:
+				default_encoding = "latin-1"
+
+			self.filename = filename or None
+			self.locale = locale or ''
+			self.encoding = encoding or default_encoding
+
 	class Config:
 		def __init__(self):
-			self.enUsername = None
-			self.enPassphrase = None
-			self.pdExportFilename = None
-			self.locale = ''
 			self.interimProgress = None
 			self.cancelled = False
 			self.useLiveServer = True
 			self.cacheLogin = False
-
-			if sys.platform == "win32":
-				self.pdExportEncoding = "windows-1252"
-			elif sys.platform == "darwin":
-				self.pdExportEncoding = "MacRoman"
-			else:
-				self.pdExportEncoding = "latin-1"
 
 		def ParseOptions(self):
 			# look on command line, then environment, to determine parameters
@@ -76,19 +78,19 @@ class PalmNoteImporter:
 
 			(options, args) = parser.parse_args()
 
-			self.pdExportFilename = ((len(args) and args[0]) or os.getenv("en_palmfile") or "")
-			self.locale = (options.locale or self.locale)
-			# Note on valid encodings: see http://docs.python.org/library/codecs.html#standard-encodings
-			self.pdExportEncoding = (options.encoding or self.pdExportEncoding)
 			if options.testServer:
 				self.useLiveServer = False
 			if options.cachelogin:
 				self.cacheLogin = True
+				
+			palm_filename = ((len(args) and args[0]) or os.getenv('en_palmfile') or '')
+			details = PalmNoteImporter.ExportFileDetails(palm_filename, options.locale, options.encoding)
+			return details
 
-		def FinalizeNonGuiOptions(self):
+		def FinalizeNonGuiOptions(self, export_details):
 			# fill in required missing parameters from raw-input
-			if not len(self.pdExportFilename):
-				self.pdExportFilename = raw_input("Palm Desktop memo export file: ")
+			if not export_details.filename:
+				export_details.filename = raw_input("Palm Desktop memo export file: ")
 
 	def load_cached_authtoken(self):
 		# Right now the persistent settings file is used only for the oauth token, so
@@ -111,12 +113,23 @@ class PalmNoteImporter:
 		settings = { 'oauth_token' : token }
 		json.dump(settings, f)
 		f.close()
-
-	def ImportNotes(self, config):
+		
+	def __init__(self, config):
+		self.config = config
+		self.connect_to_evernote()
+		
+	def ImportNotes(self, details):
 		# Do all the work.
 		# Returns a string saying what happened.
 		# Can also call interim progress function with text updates.
-		
+		if self.EN:
+			self.load_notes_file(details)
+			self.authenticate_to_evernote()
+			return self.import_notes()
+		else:
+			return 'Not connected to Evernote service'
+
+	def load_notes_file(self, details):
 		#
 		# Open and parse Palm import file
 		#
@@ -126,52 +139,70 @@ class PalmNoteImporter:
 		# (On my Windows system, getdefaultlocale() returns en_US, which maps in the
 		# locale_alias table to en_US.ISO8859-1, but setlocale to either of those fails;
 		# setlocale to '' to use the real default returns 'English_United States.1252'!))
-		config.interimProgress("Using locale '%s' for date parsing" % config.locale)
+		self.config.interimProgress("Using locale '%s' for date parsing" % details.locale)
 		try:
-			locale.setlocale(locale.LC_TIME, config.locale)
+			locale.setlocale(locale.LC_TIME, details.locale)
 		except locale.Error:
 			exc_value = sys.exc_info()[1]
-			config.interimProgress("Failed to set locale: %s" % exc_value)
+			self.config.interimProgress("Failed to set locale: %s" % exc_value)
 			newloc = locale.setlocale(locale.LC_TIME, "")
-			config.interimProgress("Using system default locale '%s' for date parsing" % newloc)
+			self.config.interimProgress("Using system default locale '%s' for date parsing" % newloc)
 			
 		parser = PalmDesktopNoteParser.PalmDesktopNoteParser()
-		error = parser.Open(config.pdExportFilename, config.pdExportEncoding)
+		error = parser.Open(details.filename, details.encoding)
 		if error:
 			return error
-		config.interimProgress("Read " + str(len(parser.notes)) + " notes from export file")
+		self.config.interimProgress("Read " + str(len(parser.notes)) + " notes from export file")
+		self.parser = parser
 		
+	def connect_to_evernote(self):
 		#
 		# Connect to Evernote service
 		#
-		config.interimProgress("Connecting to Evernote...")
-		EN = EvernoteManager.EvernoteManager(config.useLiveServer)
-		(result, err) = EN.Connect()
+		self.config.interimProgress("Connecting to Evernote...")
+		EN = EvernoteManager.EvernoteManager(self.config.useLiveServer)
+		(result, details) = EN.Connect()
 		if not result:
-			return "Failed to connect to Evernote: " + err
+			return "Failed to connect to Evernote: " + details
+		self.config.interimProgress("Connected to Evernote service at " + details)
+		self.EN = EN
+
+	def authenticate_to_evernote(self):
 		# load and apply any cached login token
 		cached_token = self.load_cached_authtoken()
 		if cached_token:
-			(result, err) = EN.AuthenticateWithCachedToken(cached_token)
-		if not EN.is_authenticated():
-			(result, err) = EN.AuthenticateInteractively()
-		if EN.is_authenticated():
-			if config.cacheLogin and not cached_token:
-				self.save_cached_authtoken(EN.authToken)
+			(result, err) = self.EN.AuthenticateWithCachedToken(cached_token)
+		if not self.EN.is_authenticated():
+			(result, err) = self.EN.AuthenticateInteractively()
+		if self.EN.is_authenticated():
+			if self.config.cacheLogin and not cached_token:
+				self.save_cached_authtoken(self.EN.authToken)
+			self.config.interimProgress("Authenticated to Evernote service as %s" % self.EN.get_user_name())
+			return True
 		else:
-			return "Failed to authenticate to Evernote: " + err
-		config.interimProgress("Connected to Evernote service as %s" % EN.get_user_name())
-		notebooks = EN.GetNotebooks()
+			self.config.interimProgress("Failed to authenticate to Evernote: %s" % err)
+			return False
+
+	def discard_authentication(self):
+		self.EN.DiscardAuthentication()
 		
+	def is_authenticated(self):
+		return self.EN and self.EN.is_authenticated()
+
+	def import_notes(self):
+		EN = self.EN
+		parser = self.parser
+
+		notebooks = EN.GetNotebooks()
 		#
 		# Create a notebook called "Palm import"
 		#
 		palmNotebook = EN.FindNotebook("Palm import")
 		if palmNotebook:
-			config.interimProgress("Reusing import notebook")
+			self.config.interimProgress("Reusing import notebook")
 		else:
 			palmNotebook = EN.CreateNotebook("Palm import")
-			config.interimProgress("Created import notebook")
+			self.config.interimProgress("Created import notebook")
 		
 		#
 		# Create a new note in that notebook for each Palm note.
@@ -193,17 +224,17 @@ class PalmNoteImporter:
 
 				createdNote = EN.CreateNotePlaintext(palmNotebook, title, body, date, tags)
 				n_out = n_out + 1
-				config.interimProgress("Created note %d/%d: %s" % (n_in, n_total, title))
+				self.config.interimProgress("Created note %d/%d: %s" % (n_in, n_total, title))
 			except KeyboardInterrupt:
-				config.cancelled = True
+				self.config.cancelled = True
 			except:
 				exc_value = sys.exc_info()[1]
 				msg = "Failed note %d/%d: %s (%s)" % (n_in, n_total, title, exc_value)
 				sys.stderr.write("\n\n" + msg + "\n\n")
 				traceback.print_exc(file=sys.stderr)
-				config.interimProgress(msg)
+				self.config.interimProgress(msg)
 
-			if config.cancelled:
+			if self.config.cancelled:
 				return "Import cancelled (%d/%d complete)" % (n_out, n_total)
 		
 		return "Import complete, %d/%d notes succeeded" % (n_out, n_total)
@@ -212,14 +243,11 @@ class PalmNoteImporter:
 # If invoked directly, just run import logic.
 #
 if __name__ == "__main__":
-	importer = PalmNoteImporter()
-	config = importer.Config()
-	config.ParseOptions()
-	config.FinalizeNonGuiOptions()
+	config = PalmNoteImporter.Config()
+	export_details = config.ParseOptions()
+	config.FinalizeNonGuiOptions(export_details)
+	config.interimProgress = lambda s: sys.stdout.write(s + '\n')
 
-	def writeln(string):
-		sys.stdout.write(string + "\n")
-	config.interimProgress = writeln
-
-	result = importer.ImportNotes(config)
+	importer = PalmNoteImporter(config)
+	result = importer.ImportNotes(export_details)
 	print result
