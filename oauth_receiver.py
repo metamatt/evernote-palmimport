@@ -35,16 +35,19 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 						(response, body) = (200, '<html><body>Thanks! Evernote Palm Importer is authorized to do what it needs. You may close this browser tab or window now.</body></html>')
 					else:
 						(response, body) = (200, '<html><body>Authentication request has been canceled. Evernote Palm Importer is not authorized to do what it needs. You may close this browser tab or window now.</body></html>')
-					self.server.receiver.thread.running = False
 				else:
 					response = 400 # Bad request
 			except:
 				response = 400 # Bad request
+		elif request.path == '/oauth_receiver/cancel':
+			response = 200
 
 		self.send_response(response)
 		self.end_headers()
 		if body:
 			self.wfile.write(body)
+		if response == 200:
+			self.server.receiver.thread.running = False
 		
 
 class ReceiverThread(threading.Thread):
@@ -76,14 +79,22 @@ class OAuthReceiver:
 		self.oauth_token = token
 		self.thread.start()
 		
-	def wait(self):
+	def wait(self, config):
+		# XXX in an ideal world, this wouldn't exist; we wouldn't loop at this
+		# layer; EvernoteManager would use continuations, the CLI could have
+		# this synchronous loop with a KeyboardInterrupt handler setting
+		# config.canceled, and the GUI already sets config.canceled. But this
+		# app doesn't justify the additional effort; this works well enough.
 		try:
 			while self.thread.running:
-				print 'waiting for authorization...'
+				if config.canceled:
+					urllib.urlopen(self.url + '/cancel')
+				else:
+					print 'waiting for authorization...'
 				time.sleep(1)
 		except KeyboardInterrupt:
 			print 'Interrupted; never mind'
-			return (None, None)
+			urllib.urlopen(self.url + '/cancel')
 		return self.oauth_verifier
 
 

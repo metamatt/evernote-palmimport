@@ -219,7 +219,7 @@ class PalmImporterUI(wx.Frame):
 			Thread.__init__(self)
 			self.notifyWindow = notifyWindow
 			self.importer = importer
-			self.importer.config.cancelled = False
+			self.importer.config.canceled = False
 			self.importer.config.interimProgress = self.interimProgress
 			self.start()
 		
@@ -232,15 +232,16 @@ class PalmImporterUI(wx.Frame):
 			wx.PostEvent(self.notifyWindow, PalmImporterUI.ResultEvent(stillGoing, msg))
 
 		def stop(self):
-			self.importer.config.cancelled = True
+			self.importer.config.canceled = True
 			
 		def run(self):
 			try:
-				self.importer.authenticate_to_evernote() # XXX make async / allow cancellation
+				self.sendProgress(True, 'Requesting authentication')
+				self.importer.authenticate_to_evernote()
 				if self.importer.is_authenticated():
 					result = self.importer.import_notes()
 				else:
-					result = 'Import canceled due to lack of authentication.'
+					result = 'Import canceled because authentication was declined or canceled.'
 				self.sendProgress(False, result)
 			except:
 				e = sys.exc_info()

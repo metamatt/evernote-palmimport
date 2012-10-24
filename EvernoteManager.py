@@ -48,14 +48,14 @@ class OAuthHelper:
 		self.oauth_host = oauth_host
 		self.oauth_url = 'https://%s/oauth' % oauth_host
 		
-	def flow(self):
+	def flow(self, config):
 		# OAuth for fun and profit.
 		# step 1: start webserver, so oauth redirect flow has somewhere to land
 		self.local_server = OAuthReceiver()
 		self._get_temp_credential()
 		
 		# step 2: invoke user's webbrowser to authorize us, passing our webserver as callback url
-		if not self._authorize_temp_credential():
+		if not self._authorize_temp_credential(config):
 			return (None, None)
 
 		# step 3: profit
@@ -77,13 +77,13 @@ class OAuthHelper:
 		result = parse_qs(response.read())
 		self.temp_credential = result['oauth_token'][0]
 
-	def _authorize_temp_credential(self):
+	def _authorize_temp_credential(self, config):
 		# browse to interactive authentication webapp, to authorize the temporary credential
 		# navigate to https://server/OAuth.action?oauth_token=<>
 		# browser will redirect to callback_url provided in initial credential request, providing the oauth token and verifier
 		self.local_server.start(self.temp_credential)
 		webbrowser.open_new_tab('https://%s/OAuth.action?oauth_token=%s' % (self.oauth_host, self.temp_credential))
-		self.oauth_verifier = self.local_server.wait()
+		self.oauth_verifier = self.local_server.wait(config)
 		return self.oauth_verifier is not None
 
 	def _get_real_credential(self):
@@ -158,10 +158,10 @@ class EvernoteManager:
 		else:
 			return [False, 'authentication failure']
 
-	def AuthenticateInteractively(self):
+	def AuthenticateInteractively(self, config):
 		# Result: tuple with success/fail as true/false, followed by error message if any
 		auth_helper = OAuthHelper(self._evernoteBaseHost)
-		(self.authToken, self.noteStoreUrl) = auth_helper.flow() # XXX GUI version should make this async and allow cancel
+		(self.authToken, self.noteStoreUrl) = auth_helper.flow(config)
 		if self.is_authenticated():
 			return [True, '']
 		else:

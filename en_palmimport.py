@@ -61,7 +61,7 @@ class PalmNoteImporter:
 	class Config:
 		def __init__(self):
 			self.interimProgress = None
-			self.cancelled = False
+			self.canceled = False
 			self.useLiveServer = True
 			self.cacheLogin = False
 
@@ -124,8 +124,10 @@ class PalmNoteImporter:
 		# Can also call interim progress function with text updates.
 		if self.EN:
 			self.load_notes_file(details)
-			self.authenticate_to_evernote()
-			return self.import_notes()
+			if self.authenticate_to_evernote():
+				return self.import_notes()
+			else:
+				return 'Authentication declined or canceled'
 		else:
 			return 'Not connected to Evernote service'
 
@@ -178,7 +180,7 @@ class PalmNoteImporter:
 		if cached_token:
 			(result, err) = self.EN.AuthenticateWithCachedToken(cached_token)
 		if not self.EN.is_authenticated():
-			(result, err) = self.EN.AuthenticateInteractively()
+			(result, err) = self.EN.AuthenticateInteractively(self.config)
 		if self.EN.is_authenticated():
 			if self.config.cacheLogin and not cached_token:
 				self.save_cached_authtoken(self.EN.authToken)
@@ -232,7 +234,7 @@ class PalmNoteImporter:
 				n_out = n_out + 1
 				self.config.interimProgress("Created note %d/%d: %s" % (n_in, n_total, title))
 			except KeyboardInterrupt:
-				self.config.cancelled = True
+				self.config.canceled = True
 			except:
 				exc_value = sys.exc_info()[1]
 				msg = "Failed note %d/%d: %s (%s)" % (n_in, n_total, title, exc_value)
@@ -240,8 +242,8 @@ class PalmNoteImporter:
 				traceback.print_exc(file=sys.stderr)
 				self.config.interimProgress(msg)
 
-			if self.config.cancelled:
-				return "Import cancelled (%d/%d complete)" % (n_out, n_total)
+			if self.config.canceled:
+				return "Import canceled (%d/%d complete)" % (n_out, n_total)
 		
 		return "Import complete, %d/%d notes succeeded" % (n_out, n_total)
 
