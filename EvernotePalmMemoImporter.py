@@ -88,7 +88,7 @@ class PalmImporterUI(wx.Frame):
 		sizer2a = wx.BoxSizer(wx.VERTICAL)
 		self.filename = wx.lib.filebrowsebutton.FileBrowseButton(panel2, self.ID_FILEBROWSE,
 									 labelText = "Exported file",
-									 changeCallback = self.OnTextFieldChange)
+									 changeCallback = self.OnExportFileNameChanged)
 		sizer2a.Add(self.filename, 0, wx.EXPAND)
 		sizer2aa = wx.BoxSizer(wx.HORIZONTAL)
 		sizer2aa.Add(wx.StaticText(panel2, -1, "Character encoding"))
@@ -99,7 +99,7 @@ class PalmImporterUI(wx.Frame):
 		sizer2a.Add(sizer2aa, 0, wx.EXPAND)
 		sizer2ab = wx.BoxSizer(wx.HORIZONTAL)
 		sizer2ab.Add(wx.StaticText(panel2, -1, "Locale used for date parsing"))
-		self.locale = wx.Choice(panel2, self.ID_LOCALE, choices=self.validLocales)
+		self.locale = wx.Choice(panel2, self.ID_LOCALE, choices = self.validLocales)
 		self.locale.SetSelection(self.locale.FindString(self.defaultLocale))
 		sizer2ab.Add(self.locale, 0, wx.EXPAND)
 		sizer2a.Add(sizer2ab, 0, wx.EXPAND)
@@ -111,7 +111,9 @@ class PalmImporterUI(wx.Frame):
 		panel3 = wx.Panel(panel, -1)		
 		sizer3 = wx.BoxSizer(wx.HORIZONTAL)
 		self.importButton = wx.Button(panel3, self.ID_IMPORT, "Import notes")
-		sizer3.Add(self.importButton, 1, wx.BOTTOM | wx.EXPAND, 5)
+		sizer3.Add(self.importButton, 3, wx.BOTTOM | wx.EXPAND, 5)
+		self.notesCount = wx.StaticText(panel3, -1, '(0 notes loaded)')
+		sizer3.Add(self.notesCount, 1, wx.BOTTOM | wx.EXPAND, 5)
 		panel3.SetSizer(sizer3)
 		vbox.Add(panel3, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 15)
 
@@ -124,24 +126,25 @@ class PalmImporterUI(wx.Frame):
 		panel4.SetSizer(sizer4)
 		vbox.Add(panel4, 1, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 15)
 
+		wx.EVT_BUTTON(self, self.ID_IMPORT, self.OnClickImport)
+		wx.EVT_TEXT(self, self.ID_ENCODING, self.OnExportFileEncodingChanged)
+		wx.EVT_CHOICE(self, self.ID_LOCALE, self.OnExportFileLocaleChanged)
+		self.importButton.SetDefault()
+		self.importButton.Enable(False)
+
 		panel.SetSizer(vbox)
 		vbox.Fit(self)
 		self.Center()
 		self.Show(True)
 
-		wx.EVT_BUTTON(self, self.ID_IMPORT, self.OnClickImport)
-		self.importButton.SetDefault()
-		self.importButton.Enable(False)
-
-		if details.filename:
-			self.filename.SetValue(details.filename)
-
 		self.importer = PalmNoteImporter(config)
-
 		self.worker = None
 		self.importing = False
 		self.Connect(-1, -1, PalmImporterUI.THREAD_RESULT_ID, self.OnThreadResult)
-	
+		
+		if details.filename:
+			self.filename.SetValue(details.filename)
+
 	def InitLocale(self, details):
 		# Build list of locales, and figure out which one is current.  A little tricky since perhaps
 		# no locale is current, in which case we need to make the default effective, and there might
@@ -169,21 +172,33 @@ class PalmImporterUI(wx.Frame):
 
 	def OnClickImport(self, event):
 		if not self.importing:
-			details = PalmNoteImporter.ExportFileDetails(self.filename.GetValue(), str(self.locale.GetStringSelection()), self.encoding.GetValue())
 			self.Report("Import process beginning.")
 			self.importButton.SetLabel("Stop importing")
-			self.worker = PalmImporterUI.ImporterThread(self, self.importer, details)
+			self.worker = PalmImporterUI.ImporterThread(self, self.importer)
 		else:
 			self.Report("Cancelling import process.")
 			self.importButton.SetLabel("Cancelling...")
 			self.worker.stop()
-			
-	def OnTextFieldChange(self, event):
-		# XXX should reload notes on change to any of the notes-details params, and key this on "are any notes loaded"
-		if len(self.filename.GetValue()):
-			self.importButton.Enable(True)
+
+	def OnExportFileNameChanged(self, event):
+		self.OnExportParametersChanged()
+		
+	def OnExportFileEncodingChanged(self, event):
+		self.OnExportParametersChanged()
+
+	def OnExportFileLocaleChanged(self, event):
+		self.OnExportParametersChanged()
+
+	def OnExportParametersChanged(self):
+		details = PalmNoteImporter.ExportFileDetails(self.filename.GetValue(), str(self.locale.GetStringSelection()), self.encoding.GetValue())
+		(result, details) = self.importer.load_notes_file(details)
+		if result:
+			num_notes = details
 		else:
-			self.importButton.Enable(False)
+			self.Report(details)
+			num_notes = 0
+		self.notesCount.SetLabel('(%d note%s loaded)' % (num_notes, '' if num_notes == 1 else 's'))
+		self.importButton.Enable(num_notes > 0)
 		
 	def OnThreadResult(self, event):
 		(stillGoing, statusMsg) = event.data
@@ -200,11 +215,10 @@ class PalmImporterUI(wx.Frame):
 			self.data = [stillGoing, statusMsg]
 	
 	class ImporterThread(Thread):
-		def __init__(self, notifyWindow, importer, export_file_details):
+		def __init__(self, notifyWindow, importer):
 			Thread.__init__(self)
 			self.notifyWindow = notifyWindow
 			self.importer = importer
-			self.export_file_details = export_file_details
 			self.importer.config.cancelled = False
 			self.importer.config.interimProgress = self.interimProgress
 			self.start()
@@ -222,7 +236,8 @@ class PalmImporterUI(wx.Frame):
 			
 		def run(self):
 			try:
-				result = self.importer.ImportNotes(self.export_file_details)
+				self.importer.authenticate_to_evernote()
+				result = self.importer.import_notes()
 				self.sendProgress(False, result)
 			except:
 				e = sys.exc_info()

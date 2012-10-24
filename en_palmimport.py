@@ -139,21 +139,28 @@ class PalmNoteImporter:
 		# (On my Windows system, getdefaultlocale() returns en_US, which maps in the
 		# locale_alias table to en_US.ISO8859-1, but setlocale to either of those fails;
 		# setlocale to '' to use the real default returns 'English_United States.1252'!))
-		self.config.interimProgress("Using locale '%s' for date parsing" % details.locale)
+		self.config.interimProgress('Opening export file "%s" with encoding "%s"' % (details.filename, details.encoding))
+		self.config.interimProgress('Using locale "%s" for date parsing' % details.locale)
 		try:
 			locale.setlocale(locale.LC_TIME, details.locale)
 		except locale.Error:
 			exc_value = sys.exc_info()[1]
-			self.config.interimProgress("Failed to set locale: %s" % exc_value)
+			self.config.interimProgress('Failed to set locale: %s' % exc_value)
 			newloc = locale.setlocale(locale.LC_TIME, "")
-			self.config.interimProgress("Using system default locale '%s' for date parsing" % newloc)
+			self.config.interimProgress('Using system default locale "%s" for date parsing' % newloc)
 			
 		parser = PalmDesktopNoteParser.PalmDesktopNoteParser()
 		error = parser.Open(details.filename, details.encoding)
 		if error:
-			return error
-		self.config.interimProgress("Read " + str(len(parser.notes)) + " notes from export file")
+			return (False, error)
+		self.config.interimProgress('Read %d notes from export file "%s"' % (len(parser.notes), details.filename))
 		self.parser = parser
+		return (True, self.number_of_notes_loaded())
+		
+	def number_of_notes_loaded(self):
+		if self.parser:
+			return len(self.parser.notes)
+		return 0
 		
 	def connect_to_evernote(self):
 		#
