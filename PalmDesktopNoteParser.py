@@ -368,7 +368,10 @@ class PalmDesktopNoteParser:
 			data = self.file.read()
 			# Need to know data encoding so we can transform to utf-8
 			# Note on good guesses: Mac would often use MacRoman; Windows would often use windows-1252; latin-1 may also be common
-			data = data.decode(encoding)
+			try:
+				data = data.decode(encoding)
+			except LookupError:
+				return "'%s' is not a valid encoding" % encoding
 			data = data.encode('utf-8')
 			data = self.RemoveControlChars(data)
 			
