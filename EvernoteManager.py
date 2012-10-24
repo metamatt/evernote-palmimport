@@ -81,13 +81,10 @@ class OAuthHelper:
 		# browse to interactive authentication webapp, to authorize the temporary credential
 		# navigate to https://server/OAuth.action?oauth_token=<>
 		# browser will redirect to callback_url provided in initial credential request, providing the oauth token and verifier
-		self.local_server.start()
+		self.local_server.start(self.temp_credential)
 		webbrowser.open_new_tab('https://%s/OAuth.action?oauth_token=%s' % (self.oauth_host, self.temp_credential))
-		(new_oauth_token, self.oauth_verifier) = self.local_server.wait()
-		if new_oauth_token is None:
-			return False
-		assert new_oauth_token == self.temp_credential
-		return True
+		self.oauth_verifier = self.local_server.wait()
+		return self.oauth_verifier is not None
 
 	def _get_real_credential(self):
 		# POST to exchange temporary authorized credential for real one

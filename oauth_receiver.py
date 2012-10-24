@@ -28,12 +28,16 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		if request.path == '/oauth_receiver':
 			query = parse_qs(request.query)
 			try:
-				self.oauth_token = query['oauth_token'][0]
-				self.oauth_verifier = query['oauth_verifier'][0]
-				(response, body) = (200, '<html><body>Thanks! Evernote Palm Importer is authorized to do what it needs. You may close this browser tab or window now.</body></html>')
-				# Since that succeeded, copy answers up to owning object
-				self.server.oauth_token = self.oauth_token
-				self.server.oauth_verifier = self.oauth_verifier
+				token = query['oauth_token'][0]
+				if token == self.server.receiver.oauth_token:
+					if query.has_key('oauth_verifier'):
+						self.server.receiver.oauth_verifier = query['oauth_verifier'][0]
+						(response, body) = (200, '<html><body>Thanks! Evernote Palm Importer is authorized to do what it needs. You may close this browser tab or window now.</body></html>')
+					else:
+						(response, body) = (200, '<html><body>Authentication request has been canceled. Evernote Palm Importer is not authorized to do what it needs. You may close this browser tab or window now.</body></html>')
+					self.server.receiver.thread.running = False
+				else:
+					response = 400 # Bad request
 			except:
 				response = 400 # Bad request
 
@@ -62,27 +66,25 @@ class OAuthReceiver:
 		self.oauth_verifier = None
 		local_address = ('127.0.0.1', 0)
 		self.httpd = BaseHTTPServer.HTTPServer(local_address, RequestHandler)
+		self.httpd.receiver = self
 		self.url = 'http://%s:%d/oauth_receiver' % (self.httpd.server_address[0], self.httpd.server_port)
 		self.thread = None
 	
-	def start(self):
+	def start(self, token):
 		print 'listening as %s' % self.url
 		self.thread = ReceiverThread(self.httpd)
+		self.oauth_token = token
 		self.thread.start()
 		
 	def wait(self):
 		try:
-			while True:
-				if hasattr(self.httpd, 'oauth_token') and hasattr(self.httpd, 'oauth_verifier'):
-					return (self.httpd.oauth_token, self.httpd.oauth_verifier)
+			while self.thread.running:
 				print 'waiting for authorization...'
 				time.sleep(1)
 		except KeyboardInterrupt:
 			print 'Interrupted; never mind'
 			return (None, None)
-		finally:
-			self.thread.running = False
-			urllib.urlopen(self.url + '/hangup') # bogus request to trigger shutdown
+		return self.oauth_verifier
 
 
 # unit test harness

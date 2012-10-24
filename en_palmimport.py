@@ -119,7 +119,7 @@ class PalmNoteImporter:
 		self.connect_to_evernote()
 		
 	def ImportNotes(self, details):
-		# Do all the work.
+		# Legacy monolithic one-shot import: Do all the work.
 		# Returns a string saying what happened.
 		# Can also call interim progress function with text updates.
 		if self.EN:
@@ -130,7 +130,6 @@ class PalmNoteImporter:
 			return 'Not connected to Evernote service'
 
 	def load_notes_file(self, details):
-		#
 		# Open and parse Palm import file
 		#
 		# First, set the user-specified locale.  (BUG: For some reason this fails on
@@ -148,7 +147,8 @@ class PalmNoteImporter:
 			self.config.interimProgress('Failed to set locale: %s' % exc_value)
 			newloc = locale.setlocale(locale.LC_TIME, "")
 			self.config.interimProgress('Using system default locale "%s" for date parsing' % newloc)
-			
+
+		# Read in the notes.
 		parser = PalmDesktopNoteParser.PalmDesktopNoteParser()
 		error = parser.Open(details.filename, details.encoding)
 		if error:
@@ -163,9 +163,7 @@ class PalmNoteImporter:
 		return 0
 		
 	def connect_to_evernote(self):
-		#
 		# Connect to Evernote service
-		#
 		self.config.interimProgress("Connecting to Evernote...")
 		EN = EvernoteManager.EvernoteManager(self.config.useLiveServer)
 		(result, details) = EN.Connect()
@@ -175,7 +173,7 @@ class PalmNoteImporter:
 		self.EN = EN
 
 	def authenticate_to_evernote(self):
-		# load and apply any cached login token
+		# Load and apply any cached login token. Then if we need to, invoke interactive OAuth flow.
 		cached_token = self.load_cached_authtoken()
 		if cached_token:
 			(result, err) = self.EN.AuthenticateWithCachedToken(cached_token)
@@ -197,6 +195,7 @@ class PalmNoteImporter:
 		return self.EN and self.EN.is_authenticated()
 
 	def import_notes(self):
+		# Assumes note-loading and service-authentication already happened.
 		EN = self.EN
 		parser = self.parser
 

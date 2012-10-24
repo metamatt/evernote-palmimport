@@ -236,12 +236,15 @@ class PalmImporterUI(wx.Frame):
 			
 		def run(self):
 			try:
-				self.importer.authenticate_to_evernote()
-				result = self.importer.import_notes()
+				self.importer.authenticate_to_evernote() # XXX make async / allow cancellation
+				if self.importer.is_authenticated():
+					result = self.importer.import_notes()
+				else:
+					result = 'Import canceled due to lack of authentication.'
 				self.sendProgress(False, result)
 			except:
 				e = sys.exc_info()
-				traceback.print_exc(file=sys.stderr)
+				traceback.print_exc(file = sys.stderr)
 				self.sendProgress(False, "Unexpected error.")
 
 #
