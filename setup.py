@@ -23,7 +23,7 @@ APP = ['EvernotePalmMemoImporter.py']
 if platform.system() == 'Darwin':
 	PLIST = {
 		'CFBundleIdentifier' : 'com.maddogsw.evernote-palm-importer',
-		'CFBundleShortVersionString': '1.1.1'
+		'CFBundleShortVersionString': '1.2.0'
 	}
 	OPTIONS = {
 		'argv_emulation': True,
