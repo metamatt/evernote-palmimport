@@ -317,7 +317,9 @@ class EvernoteManager:
 if __name__ == "__main__":
 	EN = EvernoteManager()
 	EN.Connect()
-	EN.AuthenticateInteractively()
+	class Config:
+		canceled = False
+	EN.AuthenticateInteractively(Config())
 	notebooks = EN.GetNotebooks()
 	print str(len(notebooks)) + " notebooks found"
 	for n in notebooks:
