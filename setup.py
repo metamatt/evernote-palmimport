@@ -7,7 +7,7 @@ Usage:
 
 from setuptools import setup
 import sys
-sys.path.append('./lib')
+sys.path.append('./evernote-sdk-python/lib')
 
 APP = ['EvernotePalmMemoImporter.py']
 PLIST = { 'CFBundleIdentifier' : 'com.maddogsw.evernote-palm-importer',
