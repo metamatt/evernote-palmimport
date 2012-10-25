@@ -48,6 +48,9 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 			self.wfile.write(body)
 		if response == 200:
 			self.server.receiver.thread.running = False
+	
+	def log_message(self, format, *args):
+		pass
 		
 
 class ReceiverThread(threading.Thread):
