@@ -11,4 +11,4 @@
 :: 4) on Win: run this, makeWin.bat
 :: 5) on Mac: run make all-packages
 
-c:\Python26\python.exe setupWin.py py2exe 
+c:\Python26\python.exe setup.py py2exe 
