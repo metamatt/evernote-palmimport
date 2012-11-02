@@ -1,4 +1,4 @@
-#! /usr/bin/python2.5
+#! /usr/bin/python2.6
 #
 # EvernotePalmMemoImporter.py
 # (c) 2009 Matt Ginzton, matt@maddogsw.com
@@ -16,21 +16,11 @@
 # - added support for parsing command line options: 2011/01/04
 # - added gui for character encoding: 2011/01/04
 # - added gui for locale used for date parsing: 2011/01/07
-# - add OAuth and remove username-password authentication: 2012/10/xx
+# - add OAuth and remove username-password authentication: 2012/10/24
+# - py2app and build improvements for OS X machines: 2012/11/02
 # ------------------- to do! ----------------------
 # - make prettier UI?
 
-
-#
-# Hack around py2app bug/problem (?) on Snow Leopard, where it doesn't find
-# wx in the py2app-provided app-local library directory
-#
-# thanks to http://wiki.python-ogre.org/index.php/End-User_Distribution
-#
-import sys, platform
-if platform.system() == 'Darwin':
-	sys.path.insert(0, '../Resources/lib/python2.5/lib-dynload')
-	sys.path.insert(0, '../Resources/lib/python2.5/site-packages.zip')
 
 #
 # Python modules we use

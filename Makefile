@@ -1,6 +1,6 @@
 #!/usr/bin/make
 
-PYTHON = python2.5 # easiest way to force use of 32-bit python on Mac OS X 10.6 and later (since wxpython is distributed only as 32-bit)
+PYTHON = python2.6 # I'm now building the Mac binary with python2.6 from python.org
 
 default: macos-app-selfcontained
 
@@ -21,7 +21,7 @@ source-package:
 win-package: # depends on py2exe already having run from Windows
 	cd dist && zip -9 EvernotePalmMemoImporter-Win32.zip EvernotePalmMemoImporter-Win32/EvernotePalmMemoImporter*
 
-mac-package: macos-app-selfcontained
+mac-package: # macos-app-selfcontained # now depends on py2app having run from a specially prepared Mac OS X 10.5 VM
 	ditto -ck --sequesterRsrc --keepParent dist/EvernotePalmMemoImporter.app dist/EvernotePalmMemoImporter-MacOSX.zip
 
 all-packages: source-package mac-package win-package
